@@ -1,0 +1,28 @@
+""" Primary Music DB I/O Classes """
+
+__all__ = ["MusicDBIO"]
+
+from mdbbase import MusicDBDir, MusicDBData, MusicDBIOBase
+from .musicdbid import MusicDBID
+from .parserawdata import ParseRawData
+from .metadata import MetaData
+
+class MusicDBIO(MusicDBIOBase):
+    def __init__(self, **kwargs):
+        super().__init__(db="Deezer", **kwargs)
+        self.getdbid   = MusicDBID().get
+        self.getModVal = self.mv.get
+        self.prd       = ParseRawData(self.data, self.dir, **kwargs)
+        self.meta      = MetaData(self.data, **kwargs)
+
+        ############################################################
+        # DB-specific Dir
+        ############################################################
+        self.dir.addDir("RawArtistModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
+        self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
+        self.dir.getMusicDBDir("ModValArtist").mkDir()
+        
+        ############################################################
+        # DB-specific Data
+        ############################################################
+        self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)

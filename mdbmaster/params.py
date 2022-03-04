@@ -1,0 +1,99 @@
+""" Master Param Data """
+
+__all__ = ["MasterParams"]
+
+from fileutils import DirInfo
+
+class MasterParams:
+    def __init__(self, **kwargs):
+        debug  = kwargs.get('debug', kwargs.get('verbose', False))
+        mkDirs = kwargs.get('mkDirs', False)
+        
+        
+        ################################################################################################
+        # Master List of Databases
+        ################################################################################################
+        self.dbs = ["Discogs", "Spotify", "LastFM", "Genius", "RateYourMusic", 
+                    "Deezer", "AllMusic", "MusicBrainz", "AlbumOfTheYear"]
+        self.valid = {db: True for db in self.dbs}
+        
+        
+        ################################################################################################
+        # Master List of Paths
+        ################################################################################################
+        rawPathDrive  = DirInfo("/Volumes/Piggy")
+        modPathDrive  = DirInfo("/Volumes/Seagate")
+        sumPathDrive  = DirInfo("/Users/tgadfort/Music")
+        
+        if not sumPathDrive.exists():
+            raise ValueError("Sum Drive [{0}] Does Not Exist.".format(sumPathDrive.str))
+                        
+        if mkDirs:
+            if not rawPathDrive.exists():
+                print("Raw Drive [{0}] Does Not Exist. Setting To [{1}]".format(rawPathDrive.str, sumPathDrive.str))
+                rawPathDrive = sumPathDrive
+        
+            if not modPathDrive.exists():
+                print("Mod Drive [{0}] Does Not Exist. Setting To [{1}]".format(rawPathDrive.str, sumPathDrive.str))
+                modPathDrive = sumPathDrive
+        
+        self.rawPath  = rawPathDrive.join("Discog")
+        self.modPath  = modPathDrive.join("Discog")
+        self.sumPath  = sumPathDrive.join("Discog")
+        
+        
+        ################################################################################################
+        # Max Mod Values
+        ################################################################################################        
+        self.maxModValue = 100
+        
+        
+        ################################################################################################
+        # Project Values
+        ################################################################################################        
+        self.projectName = "dbdata"
+        self.musicdbName = "musicdb"
+        
+        
+        if debug:
+            print("MasterParams()")
+            print("  ==> DBs:       {0}".format(self.getDBs()))
+            print("  ==> Raw Path:  {0}".format(self.getRawPath().str))
+            print("  ==> Mod Path:  {0}".format(self.getModPath().str))
+            print("  ==> Sum Path:  {0}".format(self.getSumPath().str))
+            print("  ==> MaxModVal: {0}".format(self.getSumPath().str))
+            print("  ==> Project:   {0}".format(self.getProjectName()))
+            print("  ==> MusicDB:   {0}".format(self.getMusicDBName()))
+
+        
+    ################################################################################################
+    # Master I/O
+    ################################################################################################
+    def getMaxModVal(self):
+        return self.maxModValue
+    
+    def getModVals(self, listIt=False):
+        retval = range(self.getMaxModVal())
+        retval = list(retval) if listIt is True else retval
+        return retval
+    
+    def isValid(self, db):
+        return self.valid.get(db, False)
+    
+    def getDBs(self):
+        return self.dbs
+
+    def getRawPath(self):
+        return self.rawPath
+
+    def getModPath(self):
+        return self.modPath
+
+    def getSumPath(self):
+        return self.sumPath
+
+    def getProjectName(self):
+        return self.projectName
+
+    def getMusicDBName(self):
+        return self.musicdbName
