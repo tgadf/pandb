@@ -1,2 +1,2 @@
 # pandb
-Universal Music DB
+A Universal Music Database
