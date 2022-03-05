@@ -51,7 +51,7 @@ class MasterParams:
         ################################################################################################
         # Project Values
         ################################################################################################        
-        self.projectName = "dbdata"
+        self.projectName = "pandb"
         self.musicdbName = "musicdb"
         
         
@@ -61,7 +61,7 @@ class MasterParams:
             print("  ==> Raw Path:  {0}".format(self.getRawPath().str))
             print("  ==> Mod Path:  {0}".format(self.getModPath().str))
             print("  ==> Sum Path:  {0}".format(self.getSumPath().str))
-            print("  ==> MaxModVal: {0}".format(self.getSumPath().str))
+            print("  ==> MaxModVal: {0}".format(self.maxModValue))
             print("  ==> Project:   {0}".format(self.getProjectName()))
             print("  ==> MusicDB:   {0}".format(self.getMusicDBName()))
 

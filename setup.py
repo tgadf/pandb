@@ -4,17 +4,6 @@ from sys import prefix
 from shutil import copyfile
 from pathlib import Path
 
-class PostInstallCommand(install):
-    def run(self):
-        dbDataPrefix = Path(prefix).joinpath("pandb")
-        if not dbDataPrefix.exists():
-            print("Install: Making Prefix Dir [{0}]".format(dbDataPrefix))
-            dbDataPrefix.mkdir()
-        dbIgnoreFilename = dbDataPrefix.joinpath("dbIgnoreData.yaml")
-        if not dbIgnoreFilename.exists():
-            print("Install: Creating Prefix Data From Local Data")
-            copyfile("dbIgnoreData.yaml", dbIgnoreFilename)
-    
 setup(
   name = 'pandb',
   version = '0.0.1',
@@ -36,7 +25,7 @@ setup(
     'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Utilities'
   ],
-  install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy'],
+  install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes'],
   packages=['mdbmaster', 'mdbbase', 'mdbid', 'mdbutils', 'mdbmeta', 'mdbsummary'] 
     + ['musicdb', 'mdbmatch']
     + ['mdblib.genius', 'mdblib.spotify', 'mdblib.discogs', 'mdblib.rateyourmusic', 'mdblib.allmusic', 'mdblib.lastfm', 'mdblib.deezer', 'mdblib.albumoftheyear']

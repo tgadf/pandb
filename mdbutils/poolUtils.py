@@ -67,4 +67,7 @@ def poolIO(parseFunction, modVals=None, expr="< 0 Days", force=False, numProcs=3
         modVals = list(range(100))
     else:
         raise ValueError("Did not undertstand modVals [{0}]".format(modVals))
+    print("poolIO(numProcs={0})".format(numProcs))
+    print("  ==> ParseFunction: {0}".format(parseFunction.__name__))
+    print("  ==> ModVals:       {0}".format(modVals))
     poolMasterIO(parser=parseFunction, modVals=modVals, expr=expr, force=force, numProcs=numProcs)
