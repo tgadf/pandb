@@ -26,10 +26,10 @@ setup(
     'Topic :: Utilities'
   ],
   install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes'],
-  packages=['mdbmaster', 'mdbbase', 'mdbid', 'mdbutils', 'mdbmeta', 'mdbsummary'] 
-    + ['musicdb', 'mdbmatch' ,'mdbgate']
-    + ['mdblib.genius', 'mdblib.spotify', 'mdblib.discogs', 'mdblib.rateyourmusic', 'mdblib.allmusic', 'mdblib.lastfm', 'mdblib.deezer', 'mdblib.albumoftheyear']
+  packages=['master', 'base', 'id', 'utils', 'meta', 'summary'] 
+    + ['musicdb', 'match' ,'gate']
+    + ['lib.genius', 'lib.spotify', 'lib.discogs', 'lib.rateyourmusic', 'lib.allmusic', 'lib.lastfm', 'lib.deezer', 'lib.albumoftheyear']
 )
 
 ## This takes forever so I'm not using it...
-#find_namespace_packages(include=['mdblib.*']) 
+#find_namespace_packages(include=['lib.*']) 
