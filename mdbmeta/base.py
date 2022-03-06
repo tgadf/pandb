@@ -68,3 +68,8 @@ class MetaDataUtilsBase:
         mediaData  = rData.media if self.isRawData(rData) else default
         retval = mediaData.media if self.isRawMediaData(mediaData) else default
         return retval
+    
+    def getMedia(self, rData, maxNum=100):
+        media = self.getMediaData(rData, {})
+        retval = {mediaType: list({release.code: release.album for release in mediaTypeData[:maxNum]}.values()) for mediaType,mediaTypeData in media.items()}
+        return retval

@@ -1,28 +1,20 @@
 from mdbbase import MusicDBDir, MusicDBData
 from mdbmaster import MasterParams
+from mdbutils import MusicDBPermDir
 from fileutils import DirInfo,FileInfo
 from ioutils import FileIO
-from sys import prefix
 
 class MusicDB:
     def __init__(self, **kwargs):
-        mp = MasterParams(**kwargs)
-        dinfo  = DirInfo(prefix)
-        rname  = mp.getMusicDBName()     
-        mdbdir = dinfo.join(rname)
+        mdbpd = MusicDBPermDir()
+        self.data = {}
         self.verbose  = kwargs.get('debug', kwargs.get('verbose', False))
         if self.verbose:
             print("MusicDB():")
-            print("  ==> Prefix Dir: {0}".format(dinfo.str))
-            print("  ==> Root Name:  {0}".format(rname))
-        mdbPrefixDir = MusicDBDir(mdbdir)
-        mdbPrefixDir.mkDir()
-        
+            print("  ==> Music Dir: {0}".format(mdbpd.getMusicDBPermPath().str))
                                    
-        self.data = {}
- 
         ############ Add Names ############
-        self.addData("", MusicDBData(path=mdbPrefixDir, fname="manualEntries"), fname=True)   
+        self.addData("", MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname="manualEntries"), fname=True)
             
 
     def addData(self, key, mdbDataIO, fname=False):

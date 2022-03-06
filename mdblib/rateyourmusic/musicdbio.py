@@ -15,7 +15,6 @@ class MusicDBIO(MusicDBIOBase):
         self.prd       = ParseRawData(self.data, self.dir, **kwargs)
         self.meta      = MetaData(self.data, **kwargs)
 
-
         ############################################################
         # DB-specific Dir
         ############################################################

@@ -2,7 +2,7 @@
 
 __all__ = ["MetaData"]
 
-from mdbmeta import MetaDataBase, MetaDataUtilsBase
+from mdbmeta import MetaDataBase, MetaDataUtilsBase, UniversalMetaData
 from pandas import DataFrame
 from listUtils import getFlatList
 from timeutils import Timestat
@@ -18,12 +18,16 @@ class MetaData(MetaDataBase):
     def __init__(self, mdbdata, **kwargs):
         super().__init__(mdbdata, **kwargs)
         self.utils = RateYourMusicMetaDataUtils()
+        self.umd   = UniversalMetaData()
 
         if self.verbose: print("{0} ModValMetaData".format(self.db))
         self.dbmetas = {}
         for meta in self.mdbdata.metas:
             func = "get{0}MetaData".format(meta)
-            if hasattr(self.__class__, func) and callable(getattr(self.__class__, func)):
+            if hasattr(self.umd.__class__, func) and callable(getattr(self.umd.__class__, func)):
+                self.dbmetas[meta] = eval("self.umd.{0}".format(func))
+                if self.verbose: print("  ==> {0}".format(meta))
+            elif hasattr(self.__class__, func) and callable(getattr(self.__class__, func)):
                 self.dbmetas[meta] = eval("self.{0}".format(func))
                 if self.verbose: print("  ==> {0}".format(meta))
                 
@@ -42,43 +46,6 @@ class MetaData(MetaDataBase):
                 eval("self.mdbdata.saveMeta{0}Data".format(meta))(modval=modVal, data=metaData)                        
                     
         if self.verbose: ts.stop()
-
-            
-    ###############################################################################################################
-    # Basic MetaData
-    ###############################################################################################################
-    def getBasicMetaData(self, modValData):
-        artistNames     = modValData.apply(lambda rData: rData.artist.name)
-        artistNames.name = "ArtistName"
-        artistURLs      = modValData.apply(lambda rData: rData.url.url)
-        artistURLs.name = "URL"
-        artistNumAlbums = modValData.apply(lambda rData: sum(rData.mediaCounts.counts.values()))
-        artistNumAlbums.name = "NumAlbums"            
-
-        metaData = DataFrame([artistNames,artistURLs,artistNumAlbums]).T
-        return metaData
-
-            
-    ###############################################################################################################
-    # Counts MetaData
-    ###############################################################################################################
-    def getCountsMetaData(self, modValData): 
-        artistCounts = modValData.apply(lambda rData: rData.mediaCounts.counts)
-        artistCounts.name = "MediaCounts"
-           
-        metaData = DataFrame(artistCounts)
-        return metaData
-
-            
-    ###############################################################################################################
-    # Media MetaData
-    ###############################################################################################################
-    def getMediaMetaData(self, modValData): 
-        artistMedia = modValData.apply(self.utils.getMedia)
-        artistMedia.name = "Media"
-           
-        metaData = DataFrame(artistMedia)
-        return metaData
 
             
     ###############################################################################################################
@@ -164,11 +131,6 @@ class RateYourMusicMetaDataUtils(MetaDataUtilsBase):
 
     def getLists(self, rData):
         retval = len(self.getExternalData(rData, "Lists", []))
-        return retval
-    
-    def getMedia(self, rData):
-        media = self.getMediaData(rData, {})
-        retval = {mediaType: list({release.code: release.album for release in mediaTypeData}.values()) for mediaType,mediaTypeData in media.items()}
         return retval
            
     

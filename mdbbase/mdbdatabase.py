@@ -101,7 +101,7 @@ class MusicDBBaseData:
         
         ##### Summary
         prefix = "ArtistID"
-        for key in ["Ref", "Name", "NumAlbums", "AlbumNames"]:
+        for key in ["Ref", "Name", "NumAlbums", "Media", "Genre", "Link", "Metric", "Bio", "Counts"]:
             fname = "{0}To{1}".format(prefix,key)
             self.data[fname] = MusicDBData(path=summaryDataDir, fname=fname)
             fname = "{0}ToSearch{1}".format(prefix,key)

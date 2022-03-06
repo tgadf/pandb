@@ -27,7 +27,7 @@ setup(
   ],
   install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes'],
   packages=['mdbmaster', 'mdbbase', 'mdbid', 'mdbutils', 'mdbmeta', 'mdbsummary'] 
-    + ['musicdb', 'mdbmatch']
+    + ['musicdb', 'mdbmatch' ,'mdbgate']
     + ['mdblib.genius', 'mdblib.spotify', 'mdblib.discogs', 'mdblib.rateyourmusic', 'mdblib.allmusic', 'mdblib.lastfm', 'mdblib.deezer', 'mdblib.albumoftheyear']
 )
 

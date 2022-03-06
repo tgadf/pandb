@@ -1,3 +1,3 @@
 from .base import *
-from .basic import *
-from .genre import *
+from .universal import *
+from .summary import *
