@@ -2,9 +2,9 @@
 
 __all__ = ["ParseRawData"]
          
-from mdbmaster import MasterParams
-from mdbbase import MusicDBBaseData, MusicDBBaseDirs, RawData
-from mdbutils import ParseRawDataUtils
+from master import MasterParams
+from base import MusicDBBaseData, MusicDBBaseDirs, RawData
+from utils import ParseRawDataUtils
 from timeutils import Timestat
 
 from .rawdbdata import RawDBData

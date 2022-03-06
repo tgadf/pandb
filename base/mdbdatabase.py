@@ -2,7 +2,7 @@
 
 __all__ = ["MusicDBData", "MusicDBBaseData"]
 
-from mdbmaster import MasterParams
+from master import MasterParams
 from .mdbdirbase import MusicDBDir, MusicDBBaseDirs
 from ioutils import FileIO
 from numpy import ravel, ndarray

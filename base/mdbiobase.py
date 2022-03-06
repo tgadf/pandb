@@ -2,11 +2,11 @@
 
 __all__ = ["MusicDBIOBase"]
 
-from mdbid import MusicDBIDModVal
-from mdbutils import MusicDBArtistName
+from dbid import MusicDBIDModVal
+from utils import MusicDBArtistName
 from .mdbdirbase import MusicDBBaseDirs
 from .mdbdatabase import MusicDBBaseData
-from mdbmeta import SummaryData
+from meta import SummaryData
 
     
 ##################################################################################################################

@@ -3,7 +3,7 @@
 __all__ = ["moveLocalFiles"]
 
 from fileutils import FileInfo
-from mdbmaster import MasterParams
+from master import MasterParams
 from .musicdbio import MusicDBIO
 
 def moveLocalFiles():

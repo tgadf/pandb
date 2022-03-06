@@ -2,7 +2,7 @@
 
 __all__ = ["RawDBData"]
 
-from mdbbase import RawDataBase, RawTextData, RawLinkData
+from base import RawDataBase, RawTextData, RawLinkData
 from .musicdbid import MusicDBID
 import regex
 from strUtils import fixName

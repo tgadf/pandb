@@ -3,7 +3,7 @@
 __all__ = ["MusicDBIDBase", "MusicDBID"]
          
 from masterArtistNameCorrection import masterArtistNameCorrection
-from mdbmaster import MasterParams
+from master import MasterParams
 from . import MusicDBIDModVal
 from listUtils import getFlatList
 

@@ -1,6 +1,6 @@
-from mdbbase import MusicDBDir, MusicDBData
-from mdbmaster import MasterParams
-from mdbutils import MusicDBPermDir
+from base import MusicDBDir, MusicDBData
+from master import MasterParams
+from utils import MusicDBPermDir
 from fileutils import DirInfo,FileInfo
 from ioutils import FileIO
 

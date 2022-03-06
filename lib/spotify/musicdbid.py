@@ -2,7 +2,7 @@
 
 __all__ = ["MusicDBID"]
 
-from mdbid import MusicDBIDBase
+from dbid import MusicDBIDBase
 
 ###########################################################################################################################################
 ## Genius

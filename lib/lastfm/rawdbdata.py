@@ -2,9 +2,9 @@
 
 __all__ = ["RawDBData"]
 
-from mdbbase import RawDataBase
+from base import RawDataBase
 from .musicdbid import MusicDBID
-from mdbid import MusicDBIDModVal
+from dbid import MusicDBIDModVal
 
 class RawDBData(RawDataBase):
     def __init__(self, debug=False):

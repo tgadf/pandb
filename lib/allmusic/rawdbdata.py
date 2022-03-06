@@ -2,7 +2,7 @@
 
 __all__ = ["RawDBData"]
 
-from mdbbase import RawDataBase
+from base import RawDataBase
 from .musicdbid import MusicDBID
 from hashlib import md5
 from strUtils import fixName

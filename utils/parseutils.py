@@ -2,7 +2,7 @@
 
 __all__ = ["ParseRawDataUtils"]
 
-from mdbbase import MusicDBBaseData, MusicDBBaseDirs
+from base import MusicDBBaseData, MusicDBBaseDirs
 from fileutils import RecentFiles
 from timeutils import Timestat
 from pandas import Series

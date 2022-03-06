@@ -2,7 +2,7 @@
 
 __all__ = ["MusicDBIDModVal"]
          
-from mdbmaster import MasterParams
+from master import MasterParams
 from hashlib import md5
 
 ###########################################################################################################################################

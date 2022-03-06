@@ -4,7 +4,7 @@ __all__ = ["RawData", "RawDataBase", "RawNameData", "RawMetaData", "RawIDData", 
            "RawPageData", "RawProfileData", "RawMediaData", "RawMediaReleaseData", "RawMediaAlbumData", 
            "RawMediaCountsData", "RawFileInfoData", "RawTextData", "RawLinkData", "RawTagData"]
 
-from mdbutils import MusicDBArtistName
+from utils import MusicDBArtistName
 from ioutils import FileIO,HTMLIO
 from fileutils import FileInfo
 

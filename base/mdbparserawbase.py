@@ -2,8 +2,8 @@
 
 __all__ = ["ParseRawDataBase"]
          
-from mdbbase import MusicDBBaseData, MusicDBBaseDirs
-from mdbid import MusicDBIDModVal
+from base import MusicDBBaseData, MusicDBBaseDirs
+from dbid import MusicDBIDModVal
 
 class ParseRawDataBase:
     def __init__(self, mdbdata, mdbdir, **kwargs):

@@ -2,7 +2,7 @@
 
 __all__ = ["MusicDBDir", "MusicDBBaseDirs"]
 
-from mdbmaster import MasterParams    
+from master import MasterParams    
 from fileutils import DirInfo
 from inspect import ismethod, signature
 

@@ -2,7 +2,7 @@
 
 __all__ = ["MusicDBIO"]
 
-from mdbbase import MusicDBDir, MusicDBData, MusicDBIOBase
+from base import MusicDBDir, MusicDBData, MusicDBIOBase
 from .musicdbid import MusicDBID
 from .parserawdata import ParseRawData
 from .metadata import MetaData

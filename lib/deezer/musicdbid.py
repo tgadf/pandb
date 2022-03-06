@@ -2,8 +2,8 @@
 
 __all__ = ["MusicDBID"]
 
-from mdbid import MusicDBIDBase
-from mdbutils import MusicDBArtistName
+from dbid import MusicDBIDBase
+from utils import MusicDBArtistName
 
 ###########################################################################################################################################
 ## Genius

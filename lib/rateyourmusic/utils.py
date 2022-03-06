@@ -2,11 +2,11 @@
 
 __all__ = ["moveLocalFiles", "removeLocalFiles"]
 
+from master import MasterParams
+from .musicdbio import MusicDBIO
 from fileutils import FileInfo,DirInfo
 from ioutils import FileIO
 from timeutils import Timestat
-from mdbmaster import MasterParams
-from mdblib.rateyourmusic import MusicDBIO
 
 def removeLocalFiles(**kwargs):
     verbose   = kwargs.get('verbose', True)

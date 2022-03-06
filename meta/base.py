@@ -2,8 +2,8 @@
 
 __all__ = ["MetaDataBase", "MetaDataUtilsBase"]
 
-from mdbmaster import MasterParams
-from mdbbase import RawDataBase
+from master import MasterParams
+from base import RawDataBase
 
 class MetaDataBase:
     def __init__(self, mdbdata, **kwargs):

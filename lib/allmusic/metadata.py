@@ -2,7 +2,7 @@
 
 __all__ = ["MetaData"]
 
-from mdbmeta import MetaDataBase, MetaDataUtilsBase, UniversalMetaData
+from meta import MetaDataBase, MetaDataUtilsBase, UniversalMetaData
 from pandas import DataFrame, Timestamp
 from listUtils import getFlatList
 from timeutils import Timestat
