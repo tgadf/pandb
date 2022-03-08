@@ -26,8 +26,7 @@ setup(
     'Topic :: Utilities'
   ],
   install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes'],
-  packages=['master', 'base', 'id', 'utils', 'meta', 'summary'] 
-    + ['musicdb', 'match' ,'gate']
+  packages=['master', 'base', 'dbid', 'utils', 'meta', 'musicdb', 'match' ,'gate']
     + ['lib.genius', 'lib.spotify', 'lib.discogs', 'lib.rateyourmusic', 'lib.allmusic', 'lib.lastfm', 'lib.deezer', 'lib.albumoftheyear']
 )
 

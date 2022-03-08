@@ -79,9 +79,9 @@ class MusicDBBaseData:
         self.mdbdir = mdbdir
         self.db = mdbdir.db
         self.data = {}
-        
-        self.debug  = kwargs.get('debug', False)
-        self.debug  = kwargs.get('verbose', self.debug)
+        self.debug  = kwargs.get('verbose', kwargs.get('debug', False))
+
+        mp = MasterParams()
         
         modValDataDir  = mdbdir.getMusicDBDir("ModVal")
         metaDataDir    = mdbdir.getMusicDBDir("Meta")
@@ -95,24 +95,25 @@ class MusicDBBaseData:
         self.data["ModVal"]  = MusicDBData(path=modValDataDir, arg=True, suffix="DB")
         
         ##### Meta Data
-        self.metas = ["Basic", "Media", "Genre", "Bio", "Link", "Metric", "Counts"]
-        for meta in self.metas:
+        self.metas = mp.getMetas()
+        self.medias = mp.getMedias()
+        for meta in self.metas.keys():
             self.data["Meta{0}".format(meta)]  = MusicDBData(path=metaDataDir, arg=True, suffix=meta)
         
         ##### Summary
-        prefix = "ArtistID"
-        for key in ["Ref", "Name", "NumAlbums", "Media", "Genre", "Link", "Metric", "Bio", "Counts"]:
-            fname = "{0}To{1}".format(prefix,key)
-            self.data[fname] = MusicDBData(path=summaryDataDir, fname=fname)
-            fname = "{0}ToSearch{1}".format(prefix,key)
-            self.data[fname] = MusicDBData(path=summaryDataDir, fname=fname)
-        
+        for meta,summaryKeys in self.metas.items():
+            for key in summaryKeys:
+                fname = "Summary{0}".format(key)
+                self.data[fname] = MusicDBData(path=summaryDataDir, fname=fname)
+                fname = "SummarySearch{0}".format(key)
+                self.data[fname] = MusicDBData(path=summaryDataDir, fname=fname)
+
         
         #########################################################################################################
         # Create Dynamic I/O Functions
         #########################################################################################################
         for key,mdbDataIO in self.data.items():
-            addFilename = True if key in ["ModVal"] else False
+            addFilename = True if (key in ["ModVal"] or key.startswith("Meta") or key.startswith("Summary")) else False
             self.addData(key, mdbDataIO, addFilename)    
             
 

@@ -9,7 +9,6 @@ from pandas import DataFrame
 class UniversalMetaData:
     def __init__(self, **kwargs):
         self.utils       = MetaDataUtilsBase(**kwargs)
-        self.maxMediaNum = kwargs.get("MaxMediaNum", 500)
 
     ###############################################################################################################
     # Basic MetaData
@@ -23,26 +22,4 @@ class UniversalMetaData:
         artistNumAlbums.name = "NumAlbums"            
 
         metaData = DataFrame([artistNames,artistURLs,artistNumAlbums]).T
-        return metaData
-
-            
-    ###############################################################################################################
-    # Counts MetaData
-    ###############################################################################################################
-    def getCountsMetaData(self, modValData): 
-        artistCounts = modValData.apply(lambda rData: rData.mediaCounts.counts)
-        artistCounts.name = "MediaCounts"
-           
-        metaData = DataFrame(artistCounts)
-        return metaData
-
-            
-    ###############################################################################################################
-    # Media MetaData
-    ###############################################################################################################
-    def getMediaMetaData(self, modValData):
-        artistMedia = modValData.apply(self.utils.getMedia, maxNum=self.maxMediaNum)
-        artistMedia.name = "Media"
-        
-        metaData = DataFrame(artistMedia)
         return metaData

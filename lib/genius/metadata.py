@@ -2,7 +2,7 @@
 
 __all__ = ["MetaData"]
 
-from meta import MetaDataBase, MetaDataUtilsBase, UniversalMetaData
+from meta import MetaDataBase, MediaTypeRankBase, MetaDataUtilsBase, MediaMetaData, UniversalMetaData
 from pandas import DataFrame
 from listUtils import getFlatList
 from timeutils import Timestat
@@ -19,6 +19,7 @@ class MetaData(MetaDataBase):
         super().__init__(mdbdata, **kwargs)
         self.utils = GeniusMetaDataUtils()
         self.umd   = UniversalMetaData()
+        self.mmd   = MediaMetaData(MediaTypeRank())
 
         if self.verbose: print("{0} ModValMetaData".format(self.db))
         self.dbmetas = {}
@@ -26,7 +27,10 @@ class MetaData(MetaDataBase):
             func = "get{0}MetaData".format(meta)
             if hasattr(self.umd.__class__, func) and callable(getattr(self.umd.__class__, func)):
                 self.dbmetas[meta] = eval("self.umd.{0}".format(func))
-                if self.verbose: print("  ==> {0}".format(meta))
+                if self.verbose: print("  ==> {0} (Universal)".format(meta))
+            elif hasattr(self.mmd.__class__, func) and callable(getattr(self.mmd.__class__, func)):
+                self.dbmetas[meta] = eval("self.mmd.{0}".format(func))
+                if self.verbose: print("  ==> {0} (Media)".format(meta))
             elif hasattr(self.__class__, func) and callable(getattr(self.__class__, func)):
                 self.dbmetas[meta] = eval("self.{0}".format(func))
                 if self.verbose: print("  ==> {0}".format(meta))
@@ -42,7 +46,9 @@ class MetaData(MetaDataBase):
             modValData = self.mdbdata.getModValData(modVal)
 
             for meta,metaFunc in self.dbmetas.items():
+                if self.verbose: print("  ==> {0} ... ".format(meta), end="")
                 metaData = metaFunc(modValData)
+                if self.verbose: print("{0}".format(metaData.shape))
                 eval("self.mdbdata.saveMeta{0}Data".format(meta))(modval=modVal, data=metaData)                        
                     
         if self.verbose: ts.stop()
@@ -72,7 +78,18 @@ class MetaData(MetaDataBase):
            
         metaData = DataFrame(artistFollowers)
         return metaData
+        
+    
 
+#####################################################################################################################################
+# Media Type Rank  Utils
+#####################################################################################################################################
+class MediaTypeRank(MediaTypeRankBase):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.mediaRanking['B'] = ["Song"]
+        
+        
 
 #####################################################################################################################################
 # Base DB MetaData

@@ -4,24 +4,15 @@ __all__ = ["SummaryData"]
 
 from base import MusicDBBaseData
 from master import MasterParams
-from utils import MusicDBArtistName
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
 from pandas import Series, DataFrame
 from listUtils import getFlatList
+from .base import SummaryDataBase
 
-class SummaryData:
+class SummaryData(SummaryDataBase):
     def __init__(self, mdbdata, **kwargs):
-        if not isinstance(mdbdata, MusicDBBaseData):
-            raise ValueError("MusicDBSummaryData(mdbdata) is not of type MusicDBBaseData")
-        self.mdbdata = mdbdata
-        self.db      = mdbdata.db
-        self.verbose = kwargs.get('debug', kwargs.get('verbose', False))
-        self.manc    = MusicDBArtistName()
-        self.modVals = MasterParams().getModVals(listIt=True)
-        
-        self.summaryTypes = ["Basic", "Media", "Counts", "Genre", "Link", "Bio"]
-        self.summaryTypes = ["Basic", "Genre", "Link", "Bio"]
+        super().__init__(mdbdata, **kwargs)
         self.dbsums = {}
         if self.verbose: print("{0} SummaryData".format(self.db))
         for summaryType in self.summaryTypes:
@@ -43,7 +34,8 @@ class SummaryData:
     # Artist ID => Name/URL Map
     ###########################################################################################################################################################
     def makeBasicSummaryData(self):
-        if self.verbose: ts = Timestat("Making Basic {0} Summary Data".format(self.db))
+        summaryType = "Basic"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
         artistIDToName      = Series(dtype = 'object', name="Name")
         artistIDToRef       = Series(dtype = 'object', name="Ref")
@@ -51,20 +43,20 @@ class SummaryData:
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaBasicData(modVal)
-            
-            artistIDToName = artistIDToName.append(modValMetaData["ArtistName"].apply(self.manc.clean))
-            artistIDToRef  = artistIDToRef.append(modValMetaData["URL"])
-            artistIDToNumAlbums  = artistIDToNumAlbums.append(modValMetaData["NumAlbums"])
-                
-        print("  ====> Saving [{0}] {1} Basic Summary Data".format(len(artistIDToName), "ID => Name"))
-        self.mdbdata.saveArtistIDToNameData(data=artistIDToName)
+            modValMetaData = self.mdbdata.getMetaBasicData(modVal) if self.mdbdata.getMetaBasicFilename(modVal).exists() else None
+            if isinstance(modValMetaData,DataFrame):
+                artistIDToName = artistIDToName.append(modValMetaData["ArtistName"].apply(self.manc.clean))
+                artistIDToRef  = artistIDToRef.append(modValMetaData["URL"])
+                artistIDToNumAlbums  = artistIDToNumAlbums.append(modValMetaData["NumAlbums"])
+
+        print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToName), "ID => Name", summaryType))
+        self.mdbdata.saveSummaryNameData(data=artistIDToName)
         
-        print("  ====> Saving [{0}] {1} Basic Summary Data".format(len(artistIDToRef), "ID => Ref"))
-        self.mdbdata.saveArtistIDToRefData(data=artistIDToRef)
+        print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToRef), "ID => Ref", summaryType))
+        self.mdbdata.saveSummaryRefData(data=artistIDToRef)
         
-        print("  ====> Saving [{0}] {1} Basic Summary Data".format(len(artistIDToNumAlbums), "ID => Num Albums"))
-        self.mdbdata.saveArtistIDToNumAlbumsData(data=artistIDToNumAlbums)
+        print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToNumAlbums), "ID => Num Albums", summaryType))
+        self.mdbdata.saveSummaryNumAlbumsData(data=artistIDToNumAlbums)
         
         if self.verbose: ts.stop()
             
@@ -74,18 +66,26 @@ class SummaryData:
     # Artist ID => Media
     ###########################################################################################################################################################
     def makeMediaSummaryData(self):
-        if self.verbose: ts = Timestat("Making Media {0} Summary Data".format(self.db))
-        
-        artistIDToMedia     = Series(dtype = 'object', name="Media")
+        summaryType = "Media"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
+                
+        artistIDToMedia     = {rankedMediaType: Series(dtype = 'object', name=rankedMediaType) for rankedMediaType in MasterParams().getMedias().values()}
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaMediaData(modVal)
+            modValMetaData = self.mdbdata.getMetaMediaData(modVal) if self.mdbdata.getMetaMediaFilename(modVal).exists() else None
+            if isinstance(modValMetaData,DataFrame):
+                for rankedMediaType,rankedMediaTypeData in modValMetaData["Media"].apply(Series).items():
+                    rankedMediaTypeFlattenedData = rankedMediaTypeData.apply(lambda x: getFlatList(x.values()) if isinstance(x,dict) else None)
+                    artistIDToMedia[rankedMediaType] = artistIDToMedia[rankedMediaType].append(rankedMediaTypeFlattenedData)
             
-            artistIDToMedia = artistIDToMedia.append(modValMetaData["Media"].apply(lambda media: getFlatList(media.values())))
-                
-        print("  ====> Saving [{0}] {1} Summary Data".format(len(artistIDToMedia), "ID => Media"))
-        self.mdbdata.saveArtistIDToMediaData(data=artistIDToMedia)
+        for rankedMediaType,rankedMediaTypeData in artistIDToMedia.items():
+            if len(rankedMediaTypeData) > 0:
+                print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(rankedMediaTypeData), "ID => {0}".format(rankedMediaType), summaryType))
+                cmd = "self.mdbdata.saveSummary{0}MediaData".format(rankedMediaType)
+                eval(cmd)(data=rankedMediaTypeData)
+            else:
+                print("  ====> Not Saving {0} {1} Summary Data".format("ID => {0}".format(rankedMediaType), summaryType))
         
         if self.verbose: ts.stop()
             
@@ -95,20 +95,21 @@ class SummaryData:
     # Artist ID => Counts
     ###########################################################################################################################################################
     def makeCountsSummaryData(self):
-        if self.verbose: ts = Timestat("Making Counts {0} Summary Data".format(self.db))
+        summaryType = "Counts"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
         artistIDToCounts     = Series(dtype = 'object', name="Counts")
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaCountsData(modVal)
-            
-            artistIDToCounts = artistIDToCounts.append(modValMetaData["MediaCounts"])
+            modValMetaData = self.mdbdata.getMetaMediaData(modVal) if self.mdbdata.getMetaMediaFilename(modVal).exists() else None
+            if isinstance(modValMetaData,DataFrame):
+                artistIDToCounts = artistIDToCounts.append(modValMetaData["Counts"])
             
         artistIDToCounts = artistIDToCounts.apply(Series)
         artistIDToCounts = artistIDToCounts.fillna(0).astype(int)
-        print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToCounts.shape[0], "ID => Counts"))
-        self.mdbdata.saveArtistIDToCountsData(data=artistIDToCounts)
+        print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToCounts.shape[0], "ID => {0}".format(summaryType)))
+        self.mdbdata.saveSummaryCountsData(data=artistIDToCounts)
         
         if self.verbose: ts.stop()
             
@@ -118,20 +119,20 @@ class SummaryData:
     # Artist ID => Genre
     ###########################################################################################################################################################
     def makeGenreSummaryData(self):
-        if self.verbose: ts = Timestat("Making Genre {0} Summary Data".format(self.db))
+        summaryType = "Genre"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
         artistIDToGenre     = None
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaGenreData(modVal)
-            
+            modValMetaData = self.mdbdata.getMetaGenreData(modVal) if self.mdbdata.getMetaGenreFilename(modVal).exists() else None            
             if isinstance(modValMetaData,DataFrame):
                 artistIDToGenre = artistIDToGenre.append(modValMetaData) if artistIDToGenre is not None else modValMetaData
             
         if isinstance(artistIDToGenre,DataFrame):
-            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToGenre.shape[0], "ID => Genre"))
-            self.mdbdata.saveArtistIDToGenreData(data=artistIDToGenre)
+            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToGenre.shape[0], "ID => {0}".format(summaryType)))
+            self.mdbdata.saveSummaryGenreData(data=artistIDToGenre)
         
         if self.verbose: ts.stop()
             
@@ -141,21 +142,21 @@ class SummaryData:
     # Artist ID => Link
     ###########################################################################################################################################################
     def makeLinkSummaryData(self):
-        if self.verbose: ts = Timestat("Making Link {0} Summary Data".format(self.db))
+        summaryType = "Link"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
         artistIDToLink     = None
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaLinkData(modVal)
-            
+            modValMetaData = self.mdbdata.getMetaLinkData(modVal) if self.mdbdata.getMetaLinkFilename(modVal).exists() else None
             if isinstance(modValMetaData,DataFrame):
                 artistIDToLink = artistIDToLink.append(modValMetaData) if artistIDToLink is not None else modValMetaData
             
         if isinstance(artistIDToLink,DataFrame):
             artistIDToLink = artistIDToLink.apply(Series)
-            print("  ====> Saving [{0}] {1} Link Summary Data".format(artistIDToLink.shape[0], "ID => Link"))
-            self.mdbdata.saveArtistIDToLinkData(data=artistIDToLink)
+            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToLink.shape[0], "ID => {0}".format(summaryType)))
+            self.mdbdata.saveSummaryLinkData(data=artistIDToLink)
         
         if self.verbose: ts.stop()
             
@@ -165,20 +166,20 @@ class SummaryData:
     # Artist ID => Bio
     ###########################################################################################################################################################
     def makeBioSummaryData(self):
-        if self.verbose: ts = Timestat("Making Bio {0} Summary Data".format(self.db))
+        summaryType = "Bio"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
         artistIDToBio     = None
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
-            modValMetaData = self.mdbdata.getMetaLinkData(modVal)
-            
+            modValMetaData = self.mdbdata.getMetaBioData(modVal) if self.mdbdata.getMetaBioFilename(modVal).exists() else None            
             if isinstance(modValMetaData,DataFrame):
                 artistIDToBio = artistIDToBio.append(modValMetaData) if artistIDToBio is not None else modValMetaData
             
         if isinstance(artistIDToBio,DataFrame):
             artistIDToBio = artistIDToBio.apply(Series)
-            print("  ====> Saving [{0}] {1} Bio Summary Data".format(artistIDToBio.shape[0], "ID => Bio"))
-            self.mdbdata.saveArtistIDToBioData(data=artistIDToBio)
+            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToBio.shape[0], "ID => {0}".format(summaryType)))
+            self.mdbdata.saveSummaryBioData(data=artistIDToBio)
         
         if self.verbose: ts.stop()

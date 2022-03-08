@@ -1,7 +1,9 @@
 """ Pool Parsing Utilites """
 
-__all__ = ["poolIO"]
+__all__ = ["poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO"]
 
+from gate import MusicDBGate
+from master import MasterParams
 from timeutils import Timestat
 from functools import partial
 from multiprocessing import Pool
@@ -9,6 +11,37 @@ from tqdm import tqdm
 from time import sleep
 from random import random
 
+
+##############################################################################################################################
+# DBs Utils
+##############################################################################################################################
+def getDBVals(dbVals):
+    if isinstance(dbVals, list):
+        pass
+    elif isinstance(dbVals, str):
+        dbVals=[dbVals]
+    elif dbVals is None:
+        dbVals=MasterParams().getDBs()
+    else:
+        raise ValueError("Did not undertstand dbVals [{0}]".format(dbVals))
+    return dbVals
+
+
+##############################################################################################################################
+# ModVals Utils
+##############################################################################################################################
+def getModVals(modVals):
+    if isinstance(modVals, list):
+        pass
+    elif isinstance(modVals, (int,str)):
+        modVals=[modVals]
+    elif isinstance(modVals, range):
+        modVals=list(modVals)
+    elif modVals is None:
+        modVals = MasterParams().getModVals(listIt=True)
+    else:
+        raise ValueError("Did not undertstand modVals [{0}]".format(modVals))
+    return modVals
 
 
 ##############################################################################################################################
@@ -36,6 +69,18 @@ def tqdmMap(func, argument_list, num_processes):
     
     
 ##############################################################################################################################
+# Eval Function
+##############################################################################################################################
+def poolParse(item, *args, **kwargs):
+    sleep(random())
+    modVal = item
+    parser = kwargs['parser']
+    del kwargs["parser"]
+    
+    parser(modVal, **kwargs)
+
+    
+##############################################################################################################################
 # Master Pool I/O Function
 ##############################################################################################################################
 def poolMasterIO(parser, modVals, expr="< 0 Days", force=False, numProcs=2):
@@ -46,7 +91,8 @@ def poolMasterIO(parser, modVals, expr="< 0 Days", force=False, numProcs=2):
     
     ## Create kwargs for pool
      # Giving some arguments for kwargs
-    pfunc = partial(func, **kwargs)
+    kwargs = {"parser": parser, "expr": expr, "force": force}
+    pfunc  = partial(func, **kwargs)
 
     ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
     result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=num_processes)
@@ -54,20 +100,64 @@ def poolMasterIO(parser, modVals, expr="< 0 Days", force=False, numProcs=2):
     
     
 ##############################################################################################################################
-# Master I/O Function
+# Pool Summary Function
 ##############################################################################################################################
-def poolIO(parseFunction, modVals=None, expr="< 0 Days", force=False, numProcs=3):
-    if isinstance(modVals, list):
-        pass
-    elif isinstance(modVals, (int,str)):
-        modVals=[modVals]
-    elif isinstance(modVals, range):
-        modVals=list(modVals)
-    elif modVals is None:
-        modVals = list(range(100))
-    else:
-        raise ValueError("Did not undertstand modVals [{0}]".format(modVals))
+def poolSummaryIO(dbVals=None, numProcs=3):
+    sumFunction = MusicDBGate().makeSummaryData
+    argument_list = getDBVals(dbVals)
+    print("poolIO(numProcs={0})".format(numProcs))
+    print("  ==> SummaryFunction: {0}".format(sumFunction.__name__))
+    print("  ==> DBs:             {0}".format(argument_list))
+    kwargs = {}
+    pfunc  = partial(sumFunction, **kwargs)
+    ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
+    result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
+    ts.stop()
+    
+    
+##########################################################################################99####################################
+# Pool Metadata Function
+################################################################################################################################
+def poolMetaModIO(makeFunction, modVals=None, numProcs=3):
+    argument_list = getModVals(modVals)
+    print("poolMetaIO(numProcs={0})".format(numProcs))
+    print("  ==> MakeFunction: {0}".format(makeFunction.__name__))
+    print("  ==> ModVals:      {0}".format(argument_list))
+    kwargs = {}
+    pfunc  = partial(makeFunction, **kwargs)
+    ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
+    result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
+    ts.stop()
+    
+    
+##########################################################################################99####################################
+# Pool Metadata Function
+################################################################################################################################
+def poolMetaDBIO(dbVals=None, numProcs=3):
+    makeFunction  = MusicDBGate().makeMetaData
+    argument_list = getDBVals(dbVals)
+    print("poolMetaIO(numProcs={0})".format(numProcs))
+    print("  ==> MakeFunction: {0}".format(makeFunction.__name__))
+    print("  ==> DBs:          {0}".format(argument_list))
+    kwargs = {}
+    pfunc  = partial(makeFunction, **kwargs)
+    ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
+    result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
+    ts.stop()
+    
+    
+    
+    
+##############################################################################################################################
+# Pool Parse RawData Function
+##############################################################################################################################
+def poolParseIO(parseFunction, modVals=None, expr="< 0 Days", force=False, numProcs=3):
+    argument_list = getModVals(modVals)
     print("poolIO(numProcs={0})".format(numProcs))
     print("  ==> ParseFunction: {0}".format(parseFunction.__name__))
-    print("  ==> ModVals:       {0}".format(modVals))
-    poolMasterIO(parser=parseFunction, modVals=modVals, expr=expr, force=force, numProcs=numProcs)
+    print("  ==> ModVals:       {0}".format(argument_list))
+    kwargs = {"expr": expr, "force": force}
+    pfunc  = partial(parseFunction, **kwargs)
+    ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
+    result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
+    ts.stop()

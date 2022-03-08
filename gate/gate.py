@@ -16,7 +16,7 @@ class MusicDBGate:
         self.mp      = mp
         self.dbs     = mp.getDBs()
         self.modVals = mp.getModVals(listIt=True)
-        self.mdbios = {db: getattr(import_module('mdblib.{0}'.format(db.lower())), "MusicDBIO")(**kwargs) for db in self.dbs}
+        self.mdbios = {db: getattr(import_module('lib.{0}'.format(db.lower())), "MusicDBIO")(**kwargs) for db in self.dbs}
         
         if self.verbose:
             print("MusicDBGate()")
@@ -25,6 +25,16 @@ class MusicDBGate:
     def getDBs(self, db):
         retval = self.dbs if db is None else [db]
         return retval
+        
+
+    #####################################################################################################################################
+    # Meta Data
+    #####################################################################################################################################
+    def getIO(self, db=None):
+        if db is None:
+            return self.mdbios
+        assert self.mp.isValid(db) == True,"Must give a valid db, not [{0}]".format(db)
+        return self.mdbios.get(db)
         
 
     #####################################################################################################################################
