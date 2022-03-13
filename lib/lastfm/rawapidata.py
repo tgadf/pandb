@@ -52,8 +52,8 @@ class RawAPIData(APIIO):
         print("Searching For {0: <50}".format(artistName), end="")
         response      = self.get(self.getArtistSearchURL(artistName))
         result        = response.get('results') if isinstance(response,dict) else {}
-        totalResults  = result.get('opensearch:totalResults', 0)
-        artistMatches = result.get('artistmatches', {})
+        totalResults  = result.get('opensearch:totalResults', 0) if isinstance(result,dict) else {}
+        artistMatches = result.get('artistmatches', {}) if isinstance(result,dict) else {}
         artistMatches = artistMatches.get('artist', [])
         retval        = [lastfmArtistMatch(artistMatch).get() for artistMatch in artistMatches]
         print("{0: <8}{1}".format(totalResults, len(retval)))

@@ -30,6 +30,7 @@ class MusicDBIO(MusicDBIOBase):
         # DB-specific Data
         ############################################################
         self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="spotifyArtistsData"))
+        self.data.addData("RawArtistInfo", MusicDBData(path=self.dir.getMusicDBDir("RawModVal"), arg=True), fname=True)
         self.data.addData("RawArtistAlbum", MusicDBData(path=self.dir.getMusicDBDir("RawAlbumModVal"), arg=True), fname=True)
         self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)
         self.data.addData("ModValAlbum", MusicDBData(path=self.dir.getMusicDBDir("ModValAlbum"), arg=True, suffix="DB"), fname=True)

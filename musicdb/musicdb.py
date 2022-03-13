@@ -1,8 +1,11 @@
 from base import MusicDBDir, MusicDBData
 from master import MasterParams
+from gate import MusicDBGate
 from utils import MusicDBPermDir
 from fileutils import DirInfo,FileInfo
+from timeutils import Timestat
 from ioutils import FileIO
+from pandas import to_numeric, DataFrame
 
 class MusicDB:
     def __init__(self, **kwargs):
@@ -39,9 +42,12 @@ class MusicDBIO:
         
     ####################################################################################################################    
     ## I/O
-    ####################################################################################################################    
-    def getData(self):
+    ####################################################################################################################
+    def setData(self):
         self.mmeDF = self.mdb.getData() if self.mmeDF is None else self.mmeDF
+        
+    def getData(self):
+        self.setData()
         return self.mmeDF
 
     def saveData(self, mmeDF=None):
@@ -62,14 +68,52 @@ class MusicDBIO:
 
     ####################################################################################################################    
     ## Append Metadata To DataFrame
-    ####################################################################################################################    
-    def addCounts(self):
-        ts = timestat("Adding DB Counts To MasterManualEntries")
+    ####################################################################################################################
+    def addMetrics(self):
+        ts = Timestat("Adding Metrics To PanDB")
+        gate     = MusicDBGate()
+        mdbios   = gate.getIO()
+
+        ######################################################################
+        # Get PanDB
+        ######################################################################
+        self.setData()
+
+        ######################################################################
+        # Calculations
+        ######################################################################
+        dbAlbums = {db: mdbio.data.getSummaryNumAlbumsData() for db,mdbio in mdbios.items()}
+        dfAlbums = DataFrame({db: to_numeric(dbIDMatches.apply(dbAlbums[db].get), errors='coerce') for db,dbIDMatches in self.mmeDF.items() if db in dbAlbums})
+        dfRank   = DataFrame({db: dbIDs[dbIDs.notna()].rank(pct=True) for db,dbIDs in dfAlbums.items()}).fillna(0.0).mean(axis=1).rank(pct=True)
+        dfRank.name = "Rank"
+
+        ######################################################################
+        # Join Rank
+        ######################################################################
+        if "Rank" in self.mmeDF.columns:
+            self.mmeDF.drop(["Rank"], axis=1, inplace=True)
+        self.mmeDF         = self.mmeDF.join(dfRank)
+        self.mmeDF["Rank"] = self.mmeDF["Rank"].fillna(0.0).rank(method='max', ascending=False).apply(int)
+
+        ######################################################################
+        # Join Albums
+        ######################################################################        
+        if "Albums" in self.mmeDF.columns:
+            self.mmeDF.drop(["Albums"], axis=1, inplace=True)
+        dfAllAlbums = dfAlbums.sum(axis=1).fillna(0).astype(int)
+        dfAllAlbums.name = "Albums"
+        self.mmeDF           = self.mmeDF.join(dfAllAlbums)
+        self.mmeDF["Albums"] = to_numeric(self.mmeDF["Albums"], errors='coerce').fillna(0)
+
+        ######################################################################
+        # Join Counts
+        ######################################################################        
         if "Counts" in self.mmeDF.columns:
             self.mmeDF.drop(["Counts"], axis=1, inplace=True)
-        self.mmeDF["Counts"] = self.mmeDF[self.dbCols].apply(lambda x: len(x[x.notna()]), axis=1)
+        self.mmeDF["Counts"] = self.mmeDF.drop(["Rank", "Albums", "ArtistName"], axis=1).count(axis=1)
+
         ts.stop()
-        
+
         
     def addAlbums(self):
         ts = timestat("Adding DB Albums/Rank To MasterManualEntries")

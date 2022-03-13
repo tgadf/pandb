@@ -18,6 +18,7 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Dir
         ############################################################
+        self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))
         self.dir.addDir("RawArtistModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
         self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
         self.dir.getMusicDBDir("ModValArtist").mkDir()
@@ -25,4 +26,6 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Data
         ############################################################
+        self.data.addData("RelatedArtists", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="deezerRelatedArtistsData"))
+        self.data.addData("ArtistsInfo", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="deezerArtistsInfo"))
         self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)

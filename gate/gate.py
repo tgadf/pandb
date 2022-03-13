@@ -40,6 +40,17 @@ class MusicDBGate:
     #####################################################################################################################################
     # Meta Data
     #####################################################################################################################################
+    def parseRawData(self, db=None, modVal=None):
+        for db in self.getDBs(db):
+            assert self.mp.isValid(db) == True,"Must give a valid db, not [{0}]".format(db)
+            cmd = "self.mdbios[db].prd.parse()" if modVal is None else "self.mdbios[db].prd.parse(modVal)"
+            print("  ==> {0}".format(cmd))
+            exec(cmd)
+        
+
+    #####################################################################################################################################
+    # Meta Data
+    #####################################################################################################################################
     def makeMetaData(self, db=None, modVal=None):
         for db in self.getDBs(db):
             assert self.mp.isValid(db) == True,"Must give a valid db, not [{0}]".format(db)

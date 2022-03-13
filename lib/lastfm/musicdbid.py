@@ -54,7 +54,19 @@ class MusicDBID(MusicDBIDBase):
         artistID = self.getIDFromHash(hashval, 11)
         return artistID
     
+    def getArtistIDName(self, s):
+        retval = "".join([c for c in self.manc.clean(str(s)).upper() if c.isalnum()])
+        return retval
+        
+    
     def getArtistPseudoID(self, s):
+        self.s = self.getArtistIDName(s)
+        hashval  = self.getHashval([self.s])
+        artistID = self.getIDFromHash(hashval, 14)
+        return artistID
+    
+    
+    def getArtistPseudoIDOld(self, s):
         self.s = self.manc.clean(str(s))
         
         ######################################################    

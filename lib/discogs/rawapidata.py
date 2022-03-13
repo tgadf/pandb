@@ -26,7 +26,7 @@ class RawAPIData(APIIO):
         return "{0}/{1}/releases?page=1&per_page={2}".format(self.baseURL, artistID, self.options["per_page"])
     
     def getArtistReleases(self, artistName, artistID):
-        print("Searching For Releases For {0: <35}\t".format("{0} ({1})".format(artistName,artistID)), end="")
+        print("Searching For Releases For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
         searchResults  = []
         requestResult  = self.get(self.getArtistReleasesURL(artistID))
         if requestResult is None or len(requestResult) == 0:
@@ -40,9 +40,9 @@ class RawAPIData(APIIO):
         print("   ===> {0}".format(len(searchResults)), end=" ")
         while nextURL is not None:
             self.sleep(3)
-            requestResult  = self.get(self.getArtistReleasesURL(nextURL))
+            requestResult  = self.get(nextURL)
             if requestResult is None:
-                return None     
+                return None
             pagination     = requestResult.get('pagination', {})
             urls           = pagination.get('urls', {})
             nextURL        = urls.get('next', None)

@@ -21,7 +21,7 @@ class MasterParams:
         ################################################################################################
         # Master List of Databases
         ################################################################################################
-        self.dbs = ["Discogs", "Spotify", "LastFM", "Genius", "RateYourMusic", 
+        self.dbs = ["Discogs", "Spotify", "LastFM", "Genius", "RateYourMusic",
                     "Deezer", "AllMusic", "MusicBrainz", "AlbumOfTheYear"]
         self.valid = {db: True for db in self.dbs}
         

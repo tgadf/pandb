@@ -54,6 +54,23 @@ class RawAPIData(APIIO):
         retval  = [spotifyAlbumRecord(result).get()]
         print(len(retval))
         return retval
+
+        
+    #########################################################################################################################################
+    # Album Info
+    #########################################################################################################################################
+    def getTracksLookupResults(self, tracks):
+        print("Searching For Track Info For {0} Tracks ... ".format(len(tracks)), end="")
+        self.sleep(0.25)
+        try:
+            result = self.sp.tracks(tracks)
+        except:
+            print("==> Error in Spotify Tracks Lookup")
+            return None
+        tracks = result.get('tracks', [])
+        retval = [spotifyTrackRecord(item).get() for item in tracks]
+        print(len(retval))
+        return retval
     
         
     #########################################################################################################################################
@@ -175,6 +192,18 @@ class RawAPIData(APIIO):
 #########################################################################################################################################
 # API Data Classes
 #########################################################################################################################################
+class spotifyTrackRecord:
+    def __init__(self, item):
+        self.album       = spotifyAlbumRecord(item.get('album', {})).get()
+        self.artists     = [spotifyArtistRecord(artist).get() for artist in item.get('artists', [])]
+        self.sid         = item.get('id')
+        self.name        = item.get('name')
+        self.stype       = item.get('type')
+        
+    def get(self):
+        return self.__dict__
+    
+    
 class spotifyArtistRecord:
     def __init__(self, item):
         self.urls       = item.get('external_urls', {})

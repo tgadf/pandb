@@ -15,6 +15,74 @@ class RawAPIData(APIIO):
         
         print("{0} API(Key=None)".format(self.name))
         
+        
+    #############################################################################################################################
+    # Artist Top 5 Tracks
+    #############################################################################################################################
+    def getArtistTop5URL(self, artistID):
+        return "{0}/artist/{1}/top".format(self.baseURL, artistID)
+    
+    
+    #############################################################################################################################
+    # Artist Info
+    #############################################################################################################################
+    def getArtistInfoURL(self, artistID):
+        return "{0}/artist/{1}".format(self.baseURL, artistID)
+    
+    def getArtistInfoData(self, artistName,artistID):
+        print("Searching For Artist Info For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
+        searchResults  = []
+        requestResult  = self.get(self.getArtistInfoURL(artistID))
+        if requestResult is None:
+            print("Error")
+            return None
+        retval = deezerRelatedArtist(requestResult).get() if isinstance(requestResult, dict) else {}
+        print(len(retval) > 0)
+        return retval
+
+    
+    #############################################################################################################################
+    # Artist Related
+    #############################################################################################################################
+    def getArtistRelatedURL(self, artistID):
+        return "{0}/artist/{1}/related".format(self.baseURL, artistID)
+    
+    def getArtistRelatedData(self, artistName,artistID):
+        print("Searching For Related Artists For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
+        searchResults  = []
+        requestResult  = self.get(self.getArtistRelatedURL(artistID))
+        if requestResult is None:
+            print("Error")
+            return None
+        requestData = requestResult.get('data', []) if isinstance(requestResult, dict) else []
+        relatedArtists = [deezerRelatedArtist(item).get() for item in requestData]
+        #retval = {"ArtistID": artistID, "ArtistName": artistName, "Related": relatedArtists}
+        retval = relatedArtists
+        print(len(relatedArtists))
+        return retval
+
+    
+    #############################################################################################################################
+    # Artist Albums
+    #############################################################################################################################
+    def getArtistAlbumsURL(self, artistID):
+        return "{0}/artist/{1}/albums".format(self.baseURL, artistID)
+
+    
+    #############################################################################################################################
+    # Artist Albums
+    #############################################################################################################################
+    def getGenreArtistsURL(self, genreID):
+        return "{0}/genre/{1}/artists".format(self.baseURL, genreID)
+
+    
+    #############################################################################################################################
+    # Artist Albums
+    #############################################################################################################################
+    def getGenreArtistsURL(self, genreID):
+        return "{0}/genre/{1}/artists".format(self.baseURL, genreID)
+        
+        
 
     #############################################################################################################################
     # Artist Search
@@ -98,3 +166,18 @@ class deezerAlbum:
 
     def setArtistID(self, artistID):
         self.artistID = artistID
+        
+        
+class deezerRelatedArtist:
+    def __init__(self, item):
+        self.id      = item.get('id')
+        self.name    = item.get('name')
+        self.link    = item.get('link')
+        self.tracks  = item.get('tracklist')
+        self.type    = item.get('type')
+        self.picture = item.get('picture')
+        self.albums  = item.get('nb_album')
+        self.fans    = item.get('nb_fan')
+        
+    def get(self):
+        return self.__dict__

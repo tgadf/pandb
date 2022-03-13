@@ -108,7 +108,7 @@ class RawDBData(RawDataBase):
             #albumArtists      = {"Name": albumArtistName, "ID": albumArtistID, "MBID": albumArtistMBID}
             albumArtists      = albumArtistName
 
-            amdc = self.makeRawMediaReleaseData(album=albumName, url=albumURL, artist=albumArtists, code=albumID, aformat={"Counts": trackCounts}, year=None, aclass=None)
+            amdc = self.makeRawMediaReleaseData(album=albumName, url=albumURL, artist=albumArtists, code=albumID, aformat={"Counts": albumCounts}, year=None, aclass=None)
             if mediaData.get(albumArtistID) is None:
                 mediaData[albumArtistID] = {}
             if mediaData[albumArtistID].get(mediaType) is None:

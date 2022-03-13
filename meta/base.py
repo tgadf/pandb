@@ -87,13 +87,29 @@ class MetaDataUtilsBase:
     def __init__(self, **kwargs):
         self.rawbase = RawDataBase()
         #self.isRawData = self.rawbase.isRawData
-        self.isRawTextData = self.rawbase.isRawTextData
-        self.isRawLinkData = self.rawbase.isRawLinkData
-        self.isRawURLInfoData = self.rawbase.isRawURLInfoData
-        self.isRawMediaData = self.rawbase.isRawMediaData
+        #self.isRawTextData = self.rawbase.isRawTextData
+        #self.isRawLinkData = self.rawbase.isRawLinkData
+        #self.isRawURLInfoData = self.rawbase.isRawURLInfoData
+        #self.isRawMediaData = self.rawbase.isRawMediaData
         
     def isRawData(self, rData):
         retval = rData.__class__.__name__ == "RawData"
+        return retval
+        
+    def isRawTextData(self, rData):
+        retval = rData.__class__.__name__ == "RawTextData"
+        return retval
+        
+    def isRawLinkData(self, rData):
+        retval = rData.__class__.__name__ == "RawLinkData"
+        return retval
+        
+    def isRawURLInfoData(self, rData):
+        retval = rData.__class__.__name__ == "RawURLInfoData"
+        return retval
+        
+    def isRawMediaData(self, rData):
+        retval = rData.__class__.__name__ == "RawMediaData"
         return retval
         
     def getProfileData(self, rData):
@@ -103,19 +119,19 @@ class MetaDataUtilsBase:
     def getExtraData(self, rData, key, default=None):
         profileData = self.getProfileData(rData)
         extraData   = getattr(profileData, 'extra') if hasattr(profileData, 'extra') else None
-        retval      = getattr(extraData, key) if hasattr(extraData, key) else default
+        retval      = extraData.get(key, default) if isinstance(extraData,dict) else default
         return retval
         
     def getGeneralData(self, rData, key, default=None):
         profileData = self.getProfileData(rData)
         generalData = getattr(profileData, 'general') if hasattr(profileData, 'general') else None
-        retval      = getattr(generalData, key) if hasattr(generalData, key) else default
+        retval      = generalData.get(key, default) if isinstance(generalData,dict) else default
         return retval
         
     def getExternalData(self, rData, key, default=None):
         profileData  = self.getProfileData(rData)
         externalData = getattr(profileData, 'external') if hasattr(profileData, 'external') else None
-        retval       = getattr(externalData, key) if hasattr(externalData, key) else default
+        retval      = externalData.get(key, default) if isinstance(externalData,dict) else default
         return retval
         
     def getGenresData(self, rData, default=None):
