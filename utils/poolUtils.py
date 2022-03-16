@@ -1,6 +1,6 @@
 """ Pool Parsing Utilites """
 
-__all__ = ["poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO"]
+__all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO"]
 
 from gate import MusicDBGate
 from master import MasterParams
@@ -161,3 +161,18 @@ def poolParseIO(parseFunction, modVals=None, expr="< 0 Days", force=False, numPr
     ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
     result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
     ts.stop()
+    
+    
+class PoolIO:
+    def __init__(self, db, **kwargs):
+        gate = MusicDBGate(**kwargs)
+        self.verbose = kwargs.get('verbose', False)
+        self.mdbio = gate.getIO(db)
+        self.sum   = self.mdbio.sum.make
+        
+    def parse(self, force=False):
+        poolParseIO(parseFunction=self.mdbio.prd.parse, force=force)
+        
+    def meta(self):
+        poolMetaModIO(makeFunction=self.mdbio.meta.make)
+        

@@ -19,6 +19,8 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Dir
         ############################################################
+        self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))    
+        
         self.dir.addDir("RawArtistModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
         self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
         self.dir.getMusicDBDir("ModValArtist").mkDir()
@@ -39,6 +41,8 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Data
         ############################################################
+        self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="allmusicArtistsData"))
+        
         self.data.addData("RawArtist", MusicDBData(path=self.dir.getMusicDBDir("RawArtistModVal"), arg=True), fname=True)
         self.data.addData("RawArtistSong", MusicDBData(path=self.dir.getMusicDBDir("RawSongModVal"), arg=True), fname=True)
         self.data.addData("RawArtistCredit", MusicDBData(path=self.dir.getMusicDBDir("RawCreditModVal"), arg=True), fname=True)

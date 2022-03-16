@@ -55,6 +55,17 @@ class MetaData(MetaDataBase):
 
             
     ###############################################################################################################
+    # Link MetaData
+    ###############################################################################################################
+    def getLinkMetaData(self, modValData):
+        relatedArtists = modValData.apply(self.utils.getRelatedArtists)
+        relatedArtists.name = "RelatedArtists"
+           
+        metaData = DataFrame(relatedArtists)
+        return metaData
+
+            
+    ###############################################################################################################
     # Genre MetaData
     ###############################################################################################################
     def getGenreMetaData(self, modValData):
@@ -108,6 +119,12 @@ class AlbumOfTheYearMetaDataUtils(MetaDataUtilsBase):
 
     def getGenres(self, rData):
         retval = self.getTextItems(self.getGenresData(rData))
+        return retval
+
+    def getRelatedArtists(self, rData):
+        profileData = self.getProfileData(rData)
+        extraData   = getattr(profileData, 'extra') if hasattr(profileData, 'extra') else None
+        retval      = {self.mdbid.get(item.href): item.href for item in extraData} if isinstance(extraData,list) else None
         return retval
     
     def getMedia(self, rData):

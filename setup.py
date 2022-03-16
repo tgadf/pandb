@@ -25,9 +25,9 @@ setup(
     'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Utilities'
   ],
-  install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes'],
+  install_requires=['jupyter_contrib_nbextensions', 'python-Levenshtein', 'tqdm', 'spotipy', 'jupyterthemes', 'requests_cache'],
   packages=['master', 'base', 'dbid', 'utils', 'meta', 'musicdb', 'match' ,'gate']
-    + ['lib.genius', 'lib.spotify', 'lib.discogs', 'lib.rateyourmusic', 'lib.allmusic', 'lib.lastfm', 'lib.deezer', 'lib.albumoftheyear']
+    + ['lib.genius', 'lib.spotify', 'lib.discogs', 'lib.rateyourmusic', 'lib.allmusic', 'lib.lastfm', 'lib.deezer', 'lib.albumoftheyear', 'lib.metalarchives']
 )
 
 ## This takes forever so I'm not using it...

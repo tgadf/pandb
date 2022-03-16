@@ -38,7 +38,7 @@ class RawAPIData(APIIO):
         print("Searching For {0: <50}".format(artistName), end="")
         response = self.get(self.getArtistInfoURL(artistName))
         record = lastfmArtistRecord(item=response.get('artist', {}), recordType="Artist").get() if isinstance(response,dict) else {}
-        print("{0}/{1}".format(len(response),len(record)))
+        print("{0}  [{1}]".format(len(response),len(record)))
         return record
 
 

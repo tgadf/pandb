@@ -48,26 +48,18 @@ class RawAPIData(APIIO):
     def getArtistSearchURL(self, search_term):
         #genius_search_url = f"http://api.genius.com/search?q={search_term}&access_token={client_access_token}"
         url="{0}/search?q={1}&access_token={2}".format(self.baseURL, quote(search_term), self.apikey)
-        if self.debug: print("  ===> Search URL: {0}  (Search Term={1} => {2})".format(url, search_term, quote(search_term)))
         return url
     
 
-    def getArtistSearch(self, search_term):
-        if self.debug: 
-            print("Artist Search: {0}".format(search_term))
-        response = self.get(self.getArtistSearchURL(search_term))
-        if self.debug:
-            print("  ===> Response: {0}".format(response))
+    def getArtistSearchData(self, artistName):
+        print("Searching For {0: <50}".format(artistName), end="")
+        response = self.get(self.getArtistSearchURL(artistName))
         results  = self.getResponse(response)
         hits     = results.get('hits', [])
-        if self.debug:
-            print("  ===> Hits: {0}".format(len(hits)))
-
-        geniusRecords = Series([geniusSearchRecord(item).get() for item in hits], dtype = 'object')    
-        nUnique = geniusRecords.apply(lambda x: x['artist']['id']).nunique()
-        print(" {0}/{1}".format(nUnique,len(geniusRecords)))
-        
-        return geniusRecords
+        geniusRecords = [geniusSearchRecord(item).get() for item in hits]
+        retval = {item['artist']['id']: item['artist']['name'] for item in geniusRecords}
+        print("{0}  [{1}]".format(len(geniusRecords),len(retval)))
+        return retval
 
 
     ##################################################################################################################################################################

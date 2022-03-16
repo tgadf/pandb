@@ -108,7 +108,7 @@ class MusicBrainzMetaDataUtils(MetaDataUtilsBase):
             
 
     def getCountry(self, rData):
-        retval = self.getGeneralData(rData, 'County')
+        retval = self.getGeneralData(rData, 'Country')
         return retval
 
     def getActiveDates(self, rData):

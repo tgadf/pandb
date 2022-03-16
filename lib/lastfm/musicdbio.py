@@ -3,6 +3,7 @@
 __all__ = ["MusicDBIO"]
 
 from base import MusicDBDir, MusicDBData, MusicDBIOBase
+from utils import poolParseIO
 from .musicdbid import MusicDBID
 from .parserawdata import ParseRawData
 from .metadata import MetaData

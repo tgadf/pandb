@@ -141,6 +141,10 @@ class ParseRawData:
                 key = "{0}-{1}".format(psModVal,modVal)
                 
                 fileType = self.fileTypes[0]
+                cmd = "self.prdutils.mdbdata.getModVal{0}Filename(key)".format(fileType)
+                finfo = eval(cmd)
+                if finfo.exists() is False:
+                    continue
                 cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
                 modValFileTypeData = eval(cmd)
                 if modValFileTypeData is None:
@@ -150,6 +154,10 @@ class ParseRawData:
                         modValData[artistID] = artistIDData
                 
                 for fileType in self.fileTypes[1:]:
+                    cmd = "self.prdutils.mdbdata.getModVal{0}Filename(key)".format(fileType)
+                    finfo = eval(cmd)
+                    if finfo.exists() is False:
+                        continue
                     cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
                     modValFileTypeData = eval(cmd)
                     if modValFileTypeData is None:
