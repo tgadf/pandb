@@ -6,7 +6,7 @@ from dbid import MusicDBIDModVal
 from utils import MusicDBArtistName
 from .mdbdirbase import MusicDBBaseDirs
 from .mdbdatabase import MusicDBBaseData
-from meta import SummaryData
+from meta import SummaryData, SearchData
 
     
 ##################################################################################################################
@@ -19,4 +19,5 @@ class MusicDBIOBase:
         self.data      = MusicDBBaseData(self.dir, **kwargs)
         self.manc      = MusicDBArtistName()
         self.mv        = MusicDBIDModVal()
-        self.sum       = SummaryData(self.data, **kwargs)        
+        self.sum       = SummaryData(self.data, **kwargs)
+        self.search    = SearchData(self.data, **kwargs)

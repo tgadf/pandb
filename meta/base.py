@@ -15,7 +15,7 @@ class SummaryDataBase:
         if not isinstance(mdbdata, MusicDBBaseData):
             raise ValueError("mdbdata is not of type MusicDBBaseData")
         mp = MasterParams()
-        self.searchTypes  = mp.getMetas()
+        self.searchTypes  = mp.getSearches()
         self.summaryTypes = mp.getMetas()
         self.mdbdata = mdbdata
         self.db      = mdbdata.db

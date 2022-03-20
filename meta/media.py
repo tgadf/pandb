@@ -33,10 +33,8 @@ class MediaMetaData:
     def getMediaMetaData(self, modValData):
         artistMediaData = modValData.apply(self.utils.getMedia, maxNum=self.maxMediaNum)
         artistMedia     = artistMediaData.apply(self.getRankedMediaData)
-        artistMedia.name = "Media"
         
-        artistMediaCounts = artistMedia.apply(self.getRankedMediaCountsData)
-        artistMediaCounts.name = "Counts"
+        mediaRankData = {mediaRankTypeName: artistMedia.apply(lambda x: x.get(mediaRankTypeName) if isinstance(x,dict) else None) for rank,mediaRankTypeName in self.mediaTypeRank.mediaTypes.items()}
                 
-        metaData = DataFrame([artistMedia,artistMediaCounts]).T
+        metaData = DataFrame(mediaRankData)
         return metaData

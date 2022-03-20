@@ -11,5 +11,8 @@ def moveLocalFiles():
     mioLocal  = MusicDBIO(local=True,mkDirs=True,debug=True)
     mioGlobal = MusicDBIO(local=False,mkDirs=True,debug=True)
     for modVal in mp.getModVals():
+        files = mioLocal.dir.getRawModValDataDir(modVal).glob("*.p")
+        _ = [FileInfo(ifile).mvFile(FileInfo(mioGlobal.data.getRawArtistInfoFilename(modVal,ifile.stem))) for ifile in files]
+        
         files = mioLocal.dir.getRawAlbumModValDataDir(modVal).glob("*.p")
         _ = [FileInfo(ifile).mvFile(FileInfo(mioGlobal.data.getRawArtistAlbumFilename(modVal,ifile.stem))) for ifile in files]

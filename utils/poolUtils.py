@@ -1,15 +1,18 @@
 """ Pool Parsing Utilites """
 
-__all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO"]
+__all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO", "poolDataFrame", "CompareData"]
 
 from gate import MusicDBGate
 from master import MasterParams
 from timeutils import Timestat
 from functools import partial
 from multiprocessing import Pool
+from pandas import concat, Series, DataFrame
 from tqdm import tqdm
 from time import sleep
 from random import random
+from numpy import array_split, vectorize
+import Levenshtein
 
 
 ##############################################################################################################################
@@ -162,17 +165,57 @@ def poolParseIO(parseFunction, modVals=None, expr="< 0 Days", force=False, numPr
     result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
     ts.stop()
     
+
+class CompareData:
+    def __init__(self, data, cutoff=0.8):
+        self.data = data
+        self.cutoff = cutoff
+        self.vCompare = vectorize(self.compare)
+        
+    def getLevenshtein(self, x1, x2):
+        try:
+            return Levenshtein.ratio(x1, x2)
+        except:
+            print("ERROR With Levenshtein.ratio({0}, {1})".format(x1,x2))
+            return 0.0        
+        
+    def compare(self, artistName):
+        return self.data["Name"].apply(self.getLevenshtein, x2=artistName)
+    
+    def getNearestNames(self, artistName):
+        print(artistName)
+        retval = self.data["Name"].apply(self.getLevenshtein, x2=artistName)
+        return retval
+        #retval = Series(self.vCompare(artistName), index=self.data.index)
+        print(artistName,'\t',retval)
+        return self.data.index
+        #return self.data.index[self.vCompare(artistName) > self.cutoff] #mdbSearchData["Name"])
+        return ["Some Index"]
+    
+    
+def poolDataFrame(df, func, n_cores=3):
+    df_split = array_split(df, n_cores)
+    pool     = Pool(n_cores)
+    retval   = pool.map(func, df_split)
+    #df       = concat(retval)
+    pool.close()
+    pool.join()
+    return retval
+    
     
 class PoolIO:
     def __init__(self, db, **kwargs):
         gate = MusicDBGate(**kwargs)
         self.verbose = kwargs.get('verbose', False)
-        self.mdbio = gate.getIO(db)
-        self.sum   = self.mdbio.sum.make
+        self.mdbio   = gate.getIO(db)
+        self.sum     = self.mdbio.sum.make
+        
+        func = "self.mdbio.prd.mergeModValData"
+        if hasattr(self.__class__, func) and callable(getattr(self.__class__, func)):
+            self.merge = eval(func)
         
     def parse(self, force=False):
         poolParseIO(parseFunction=self.mdbio.prd.parse, force=force)
         
     def meta(self):
         poolMetaModIO(makeFunction=self.mdbio.meta.make)
-        

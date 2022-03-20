@@ -16,6 +16,7 @@ class MasterParams:
         self.medias = {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
         self.metas  = {"Basic": ["Name", "Ref", "NumAlbums"], "Media": ["{0}Media".format(media) for media in self.medias.values()],
                        "Genre": ["Genre"], "Bio": ["Bio"], "Link": ["Link"], "Metric": ["Metric"], "Counts": ["Counts"]}
+        self.searches = ["Name"] + ["{0}Media".format(media) for media in ["Album", "SingleEP"]]
         
         
         ################################################################################################
@@ -82,6 +83,9 @@ class MasterParams:
     
     def getMetas(self):
         return self.metas
+    
+    def getSearches(self):
+        return self.searches
     
     def getMaxModVal(self):
         return self.maxModValue

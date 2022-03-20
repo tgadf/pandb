@@ -36,7 +36,7 @@ class MetaData(MetaDataBase):
                 if self.verbose: print("  ==> {0}".format(meta))
                 
         
-    def make(self, modVal=None):
+    def make(self, modVal=None, metatype=None):
         modVals = self.getModVals(modVal)
         if self.verbose: ts = Timestat("Making {0} {1} MetaData".format(len(modVals), self.db))
         
@@ -45,7 +45,8 @@ class MetaData(MetaDataBase):
                 if self.verbose: ts.update(n=i+1, N=len(modVals))
             modValData = self.mdbdata.getModValData(modVal)
 
-            for meta,metaFunc in self.dbmetas.items():
+            metas = {meta: metaFunc for meta,metaFunc in self.dbmetas.items() if ((isinstance(metatype,str) and meta == metatype) or (metatype is None))}
+            for meta,metaFunc in metas.items():
                 if self.verbose: print("  ==> {0} ... ".format(meta), end="")
                 metaData = metaFunc(modValData)
                 if self.verbose: print("{0}".format(metaData.shape))
