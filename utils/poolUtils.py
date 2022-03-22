@@ -209,10 +209,11 @@ class PoolIO:
         self.verbose = kwargs.get('verbose', False)
         self.mdbio   = gate.getIO(db)
         self.sum     = self.mdbio.sum.make
+        self.search  = self.mdbio.search.make
         
-        func = "self.mdbio.prd.mergeModValData"
-        if hasattr(self.__class__, func) and callable(getattr(self.__class__, func)):
-            self.merge = eval(func)
+        func = "mergeModValData"
+        if hasattr(self.mdbio.prd, func) and callable(getattr(self.mdbio.prd, func)):
+            self.merge = getattr(self.mdbio.prd, func)
         
     def parse(self, force=False):
         poolParseIO(parseFunction=self.mdbio.prd.parse, force=force)

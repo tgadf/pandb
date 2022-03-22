@@ -27,8 +27,8 @@ class RawAPIData(APIIO):
     #########################################################################################################################################
     # Artist Info
     #########################################################################################################################################
-    def getArtistIDLookupResults(self, artistID):
-        print("Searching For {0: <35}".format(artistID), end="")
+    def getArtistIDLookupResults(self, artistID, artistName):
+        print("Searching For {0: <50}".format("{0} ({1})".format(artistName,artistID)), end="")
         self.sleep(0.25)
         try:
             result = self.sp.artist(artistID)

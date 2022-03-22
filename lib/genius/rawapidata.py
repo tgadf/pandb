@@ -36,7 +36,7 @@ class RawAPIData(APIIO):
         return "{0}/artists/{1}?access_token={2}".format(self.baseURL, artist_id, self.apikey)
     
     def getArtistInfo(self, artistName, artistID):
-        print("Searching For Songs For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
+        print("Searching For Info For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
         geniusRecord = self.getResponse(self.get(self.getArtistInfoURL(artistID)))
         print(" {0}".format(len(geniusRecord)))
         return geniusRecord

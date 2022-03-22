@@ -7,6 +7,7 @@ from base import MusicDBBaseData, MusicDBBaseDirs
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
+from pandas import DataFrame
 from .rawdbdata import RawDBData
 from .musicdbid import MusicDBID
 
@@ -101,10 +102,24 @@ class ParseRawData:
     #####################################################################################################################
     # Merge Parsed Data
     #####################################################################################################################
-    def mergeModValData(self, modVal=None):
+    def mergeModValData(self, modVal=None, **kwargs):
         mp = MasterParams()
         modVals = list(mp.getModVals()) if modVal is None else [modVal]
+        self.verbose = kwargs.get('verbose', False) if kwargs.get('verbose') is not None else self.verbose
         if self.verbose: ts = Timestat("Creating {0} ModVal Data".format(len(modVals)))
+            
+            
+        ##############################################################################
+        # Get Extra Info Data
+        ##############################################################################
+        artistRelatedData = self.prdutils.mdbdata.getRelatedArtistsData()
+        artistRelatedData.name = "RelatedArtists"
+        artistRelatedData = DataFrame(artistRelatedData)
+        artistInfoData    = self.prdutils.mdbdata.getArtistsInfoData()
+        extraInfoData     = artistInfoData.join(artistRelatedData)
+        
+        
+        modVals=[0]
         for i,modVal in enumerate(modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(modVals))
@@ -124,6 +139,19 @@ class ParseRawData:
                     continue                    
                 for artistID,artistIDData in modValFileTypeData.iteritems():
                     if modValData.get(artistID) is None:
+                        ###########################################################################
+                        # Append Extra Info Data (if available)
+                        ###########################################################################
+                        if artistID in extraInfoData.index:
+                            profile = artistIDData.profile
+                            extraData = getattr(profile, 'extra') if hasattr(profile, 'extra') else {}
+                            if isinstance(extraData,dict):
+                                extraData['Image']   = extraInfoData.loc[artistID, 'picture']
+                                extraData['Albums']  = extraInfoData.loc[artistID, 'albums']
+                                extraData['Fans']    = extraInfoData.loc[artistID, 'fans']
+                                extraData['Related'] = extraInfoData.loc[artistID, 'RelatedArtists']
+                            if len(extraData) > 0:
+                                artistIDData.profile.extra = extraData
                         modValData[artistID] = artistIDData
                 
                 for fileType in self.fileTypes[1:]:
