@@ -1,11 +1,15 @@
+""" Primary Music Database """
+
+__all__ = ["MusicDB", "MusicDBIO"]
+
 from base import MusicDBDir, MusicDBData
-from master import MasterParams
+from master import MasterParams, MusicDBPermDir
 from gate import MusicDBGate
-from utils import MusicDBPermDir
 from fileutils import DirInfo,FileInfo
 from timeutils import Timestat
 from ioutils import FileIO
-from pandas import to_numeric, DataFrame
+from pandas import to_numeric, DataFrame, Series
+from uuid import uuid4
 
 class MusicDB:
     def __init__(self, **kwargs):
@@ -54,6 +58,11 @@ class MusicDBIO:
         mmeDF = self.mmeDF if mmeDF is None else mmeDF
         print("Saving Master DataFrame To {0}".format(self.mdb.getFilename().str))
         self.mdb.saveData(data=mmeDF)
+        
+    def isValid(self, db):
+        if not isinstance(self.mmeDF,DataFrame):
+            self.setData()
+        return db in self.mmeDF.columns
         
         
     ####################################################################################################################    
@@ -167,7 +176,28 @@ class MusicDBIO:
 
     ####################################################################################################################    
     ## Interal Helpers
-    ####################################################################################################################    
+    ####################################################################################################################
+    def getIndexLookup(self, db):
+        dblookup = {}
+        for idx,dbid in self.getNotNaDBIDs(db)[db].iteritems():
+            if isinstance(dbid,str):
+                if dblookup.get(dbid) is None:
+                    dblookup[dbid] = []
+                dblookup[dbid].append(idx)
+            elif isinstance(dbid,list):
+                for val in dbid:
+                    if dblookup.get(val) is None:
+                        dblookup[val] = []
+                    dblookup[val].append(idx)
+        retval = Series(dblookup).apply(lambda dbid: dbid[0] if (isinstance(dbid,list) and len(dbid) == 1) else dbid)
+        return retval
+    
+    def getNotNaDBIDs(self, db):
+        return self.mmeDF[self.mmeDF[db].notna()]
+    
+    def getNaDBIDs(self, db):
+        return self.mmeDF[~self.mmeDF[db].notna()]
+    
     def getMMEByID(self, db, dbID):
         return self.mmeDF[self.mmeDF[db] == str(dbID)]
     

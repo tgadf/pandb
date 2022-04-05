@@ -124,9 +124,11 @@ class ParseRawData:
     #####################################################################################################################
     # Merge Parsed Data
     #####################################################################################################################
-    def mergeModValData(self, modVal=None):
-        mp = MasterParams()
-        modVals = list(mp.getModVals()) if modVal is None else [modVal]
+    def mergeModValData(self, modVal=None, **kwargs):
+        mp           = MasterParams()
+        modVals      = list(mp.getModVals()) if modVal is None else [modVal]
+        maxMedia     = kwargs.get('maxMedia', 100)
+        self.verbose = kwargs.get('verbose', False) if kwargs.get('verbose') is not None else self.verbose
         if self.verbose: ts = Timestat("Creating {0} ModVal Data".format(len(modVals)))
         for i,modVal in enumerate(modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
@@ -134,99 +136,55 @@ class ParseRawData:
 
             modValData = {}
             psModVals = list(mp.getModVals())
-            if self.verbose: tsPS = Timestat("Loading Pseudo ModVal={0} Data".format(modVal))
+            fileType = self.fileTypes[0]
+            if self.verbose: tsPS = Timestat("Loading ModVal={0} {1} Data".format(modVal,fileType))
             for j,psModVal in enumerate(psModVals):
                 if (j) % 25 == 0 and j > 0:
                     if self.verbose: tsPS.update(n=j, N=len(psModVals))
                 key = "{0}-{1}".format(psModVal,modVal)
                 
-                fileType = self.fileTypes[0]
-                cmd = "self.prdutils.mdbdata.getModVal{0}Filename(key)".format(fileType)
-                finfo = eval(cmd)
-                if finfo.exists() is False:
-                    continue
                 cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
                 modValFileTypeData = eval(cmd)
                 if modValFileTypeData is None:
-                    continue                    
+                    continue
                 for artistID,artistIDData in modValFileTypeData.iteritems():
-                    if modValData.get(artistID) is None:
-                        modValData[artistID] = artistIDData
+                    modValData[artistID] = artistIDData
                 
-                for fileType in self.fileTypes[1:]:
-                    cmd = "self.prdutils.mdbdata.getModVal{0}Filename(key)".format(fileType)
-                    finfo = eval(cmd)
-                    if finfo.exists() is False:
-                        continue
+                
+            for fileType in self.fileTypes[1:]:
+                if self.verbose: tsPS = Timestat("Loading ModVal={0} {1} Data".format(modVal,fileType))
+                for j,psModVal in enumerate(psModVals):
+                    if (j) % 25 == 0 and j > 0:
+                        if self.verbose: tsPS.update(n=j, N=len(psModVals))
+                    key = "{0}-{1}".format(psModVal,modVal)
+
                     cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
                     modValFileTypeData = eval(cmd)
                     if modValFileTypeData is None:
                         continue
                     for artistID,artistIDData in modValFileTypeData.iteritems():
+                        #print(key,'\t',artistID,'\t','album \t',artistIDData.artist.name,end="\t")
                         if modValData.get(artistID) is None:
+                            #print(" ==> ADDED <==")
                             modValData[artistID] = artistIDData
                         else:
                             modValData[artistID].media.media = self.prdutils.mergeMediaData(modValData[artistID].media.media, artistIDData.media.media)
                             modValData[artistID].mediaCounts.counts = self.prdutils.updateMediaCounts(modValData[artistID].media.media)
+                            #print(" ==> UPDATE MEDIA <==")
                                 
             if self.verbose: tsPS.stop()
                 
+            ####################################################################################
+            # Only keep top 200 of each media type (LastFM returns so many entries)
+            ####################################################################################
+            for artistID,artistIDData in modValData.items():
+                artistMedia = artistIDData.media.media
+                for mediaType in artistMedia.keys():
+                    minCount = Series([x.aformat.get('Counts') for x in artistMedia[mediaType]]).astype(int).sort_values(ascending=False).head(maxMedia).min()
+                    artistMedia[mediaType] = [item for item in artistMedia[mediaType] if int(item.aformat.get('Counts', 0)) >= minCount]
+                    #print(artistID,'\t',mediaType,'\t',minCount,len(artistMedia[mediaType]))
+                artistIDData.media.media = artistMedia
+                
             if self.verbose: print("  ===> Saving [{0}] ModVal={1} {2} Entries".format(len(modValData), modVal, "DB Data"))
             self.prdutils.saveModValData(modVal=modVal, modValData=modValData)
-            
-            
-        return
-                
-            
-        for j,oe in enumerate(range(Noe)):
-            if self.verbose: tsOE = Timestat("Creating ModValData Pass {0}".format(oe))
-            newData = {modVal: 0 for modVal in range(self.mv.maxModVal) if modVal % Noe == oe}
-            
-            modValData = {}
-            if self.verbose: tsOEArtist = Timestat("Creating ModValData Artist Pass {0}".format(oe))
-            for i,fileTypeModVal in enumerate(range(self.mv.maxModVal)):
-                if (i+1) % 25 == 0 or (i+1) == 5:
-                    if self.verbose: tsOEArtist.update(n=i+1, N=self.mv.maxModVal)
-                modValFileTypeData = self.prdutils.getFileTypeModValData(fileTypeModVal, self.fileTypes[0])
-                for modVal,modValFTData in modValFileTypeData.items():
-                    if modVal % Noe != oe:
-                        continue
-                    if modValData.get(modVal) is None:
-                        modValData[modVal] = {}
-                    modValData[modVal].update(modValFTData)
-            if self.verbose: tsOEArtist.stop()
-                
-            if self.verbose: print("  ===> Total ModVals: {0}".format(len(modValData)))
-            if self.verbose: print("  ===> Total Artists: {0}".format(sum([len(x) for x in modValData.values()])))
-                        
-            for fileType in self.fileTypes[1:]:
-                if self.verbose: tsOEMedia = Timestat("Creating ModValData Media Pass {0}".format(oe))
-                for i,fileTypeModVal in enumerate(range(self.mv.maxModVal)):
-                    if (i+1) % 25 == 0 or (i+1) == 5:
-                        if self.verbose: tsOEMedia.update(n=i+1, N=self.mv.maxModVal)
-                    modValFileTypeData = self.prdutils.getFileTypeModValData(fileTypeModVal, fileType)
-                    for modVal,modValFTData in modValFileTypeData.items():
-                        if modVal % Noe != oe:
-                            continue
-                        if modValData.get(modVal) is None:
-                            modValData[modVal] = {}
-                        for artistID,artistIDData in modValFTData.items():
-                            if modValData[modVal].get(artistID) is None:
-                                modValData[modVal][artistID] = artistIDData
-                            else:
-                                modValData[modVal][artistID].media.media = self.prdutils.mergeMediaData(modValData[modVal][artistID].media.media, artistIDData.media.media)
-                                modValData[modVal][artistID].mediaCounts.counts = self.prdutils.updateMediaCounts(modValData[modVal][artistID].media.media)
-                if self.verbose: tsOEMedia.stop()
-                                
-
-            if self.verbose: tsOE.stop()
-
-            for modVal,dbModData in modValData.items():
-                if self.verbose: print("  ===> Saving [{0}] ModVal={1} {2} Entries".format(len(dbModData), modVal, "DB Data"))
-                self.prdutils.saveModValData(modVal, dbModData)
-                
-            if self.verbose: ts.update(n=j+1, N=Noe)
-                
-                
-            break
-        if self.verbose: ts.stop()
+           

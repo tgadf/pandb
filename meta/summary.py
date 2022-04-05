@@ -38,9 +38,9 @@ class SummaryData(SummaryDataBase):
         summaryType = "Basic"
         if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
         
-        artistIDToName      = Series(dtype = 'object', name="Name")
-        artistIDToRef       = Series(dtype = 'object', name="Ref")
-        artistIDToNumAlbums = Series(dtype = 'object', name="NumAlbums")
+        artistIDToName      = Series(dtype = 'object')
+        artistIDToRef       = Series(dtype = 'object')
+        artistIDToNumAlbums = Series(dtype = 'object')
         for i,modVal in enumerate(self.modVals):
             if (i+1) % 25 == 0 or (i+1) == 5:
                 if self.verbose: ts.update(n=i+1, N=len(self.modVals))
@@ -51,12 +51,15 @@ class SummaryData(SummaryDataBase):
                 artistIDToNumAlbums  = concat([artistIDToNumAlbums, modValMetaData["NumAlbums"]])
 
         print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToName), "ID => Name", summaryType))
+        artistIDToName.name = "Name"
         self.mdbdata.saveSummaryNameData(data=artistIDToName)
         
         print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToRef), "ID => Ref", summaryType))
+        artistIDToRef.name = "Ref"
         self.mdbdata.saveSummaryRefData(data=artistIDToRef)
         
         print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(artistIDToNumAlbums), "ID => Num Albums", summaryType))
+        artistIDToNumAlbums.name = "NumAlbums"
         self.mdbdata.saveSummaryNumAlbumsData(data=artistIDToNumAlbums)
         
         if self.verbose: ts.stop()
@@ -88,7 +91,7 @@ class SummaryData(SummaryDataBase):
         self.mdbdata.saveSummaryCountsData(data=artistIDToCounts)
             
         for rankedMediaType,rankedMediaTypeData in artistIDToMedia.items():
-            if len(rankedMediaTypeData) > 0:
+            if len(rankedMediaTypeData) > 0 and rankedMediaTypeData.count() > 0:
                 print("  ====> Saving [{0}] {1} {2} Summary Data".format(len(rankedMediaTypeData), "ID => {0}".format(rankedMediaType), summaryType))
                 rankedMediaTypeData.name = rankedMediaType
                 cmd = "self.mdbdata.saveSummary{0}MediaData".format(rankedMediaType)
@@ -140,7 +143,7 @@ class SummaryData(SummaryDataBase):
                 artistIDToLink = concat([artistIDToLink, modValMetaData]) if artistIDToLink is not None else modValMetaData
             
         if isinstance(artistIDToLink,DataFrame):
-            artistIDToLink = artistIDToLink.apply(Series)
+            #artistIDToLink = artistIDToLink.apply(Series)
             print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToLink.shape[0], "ID => {0}".format(summaryType)))
             self.mdbdata.saveSummaryLinkData(data=artistIDToLink)
         
@@ -164,8 +167,32 @@ class SummaryData(SummaryDataBase):
                 artistIDToBio = concat([artistIDToBio, modValMetaData]) if artistIDToBio is not None else modValMetaData
             
         if isinstance(artistIDToBio,DataFrame):
-            artistIDToBio = artistIDToBio.apply(Series)
+            #artistIDToBio = artistIDToBio.apply(Series)
             print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToBio.shape[0], "ID => {0}".format(summaryType)))
             self.mdbdata.saveSummaryBioData(data=artistIDToBio)
+        
+        if self.verbose: ts.stop()
+            
+            
+
+    ###########################################################################################################################################################
+    # Artist ID => Metric
+    ###########################################################################################################################################################
+    def makeMetricSummaryData(self):
+        summaryType = "Metric"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
+        
+        artistIDToMetric     = None
+        for i,modVal in enumerate(self.modVals):
+            if (i+1) % 25 == 0 or (i+1) == 5:
+                if self.verbose: ts.update(n=i+1, N=len(self.modVals))
+            modValMetaData = self.mdbdata.getMetaMetricData(modVal) if self.mdbdata.getMetaMetricFilename(modVal).exists() else None            
+            if isinstance(modValMetaData,DataFrame):
+                artistIDToMetric = concat([artistIDToMetric, modValMetaData]) if artistIDToMetric is not None else modValMetaData
+            
+        if isinstance(artistIDToMetric,DataFrame):
+            #artistIDToBio = artistIDToBio.apply(Series)
+            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToMetric.shape[0], "ID => {0}".format(summaryType)))
+            self.mdbdata.saveSummaryMetricData(data=artistIDToMetric)
         
         if self.verbose: ts.stop()

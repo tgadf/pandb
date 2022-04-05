@@ -6,6 +6,7 @@ from base import MusicDBDir, MusicDBData, MusicDBIOBase
 from .musicdbid import MusicDBID
 from .parserawdata import ParseRawData
 from .metadata import MetaData
+from .searchomit import SearchOmit
 
 class MusicDBIO(MusicDBIOBase):
     def __init__(self, **kwargs):
@@ -14,6 +15,11 @@ class MusicDBIO(MusicDBIOBase):
         self.getModVal = self.mv.get
         self.prd       = ParseRawData(self.data, self.dir, **kwargs)
         self.meta      = MetaData(self.data, **kwargs)
+
+        ############################################################
+        # Omit Data
+        ############################################################
+        self.data.addData("Omit", SearchOmit())
 
         ############################################################
         # DB-specific Dir

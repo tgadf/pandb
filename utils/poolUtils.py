@@ -1,6 +1,6 @@
 """ Pool Parsing Utilites """
 
-__all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolSummaryIO", "poolDataFrame", "CompareData"]
+__all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolMergeIO", "poolSummaryIO", "poolDataFrame", "CompareData"]
 
 from gate import MusicDBGate
 from master import MasterParams
@@ -119,6 +119,21 @@ def poolSummaryIO(dbVals=None, numProcs=3):
     
     
 ##########################################################################################99####################################
+# Pool Merge Function
+################################################################################################################################
+def poolMergeIO(mergeFunction, modVals=None, numProcs=3):
+    argument_list = getModVals(modVals)
+    print("poolMergeIO(numProcs={0})".format(numProcs))
+    print("  ==> MergeFunction: {0}".format(mergeFunction.__name__))
+    print("  ==> ModVals:       {0}".format(argument_list))
+    kwargs = {}
+    pfunc  = partial(mergeFunction, **kwargs)
+    ts = Timestat("Running imap multiprocessing for {0} mod values ...".format(len(argument_list)))
+    result_list = tqdmMap(func=pfunc, argument_list=argument_list, num_processes=numProcs)
+    ts.stop()
+    
+    
+##########################################################################################99####################################
 # Pool Metadata Function
 ################################################################################################################################
 def poolMetaModIO(makeFunction, modVals=None, numProcs=3):
@@ -207,16 +222,18 @@ class PoolIO:
     def __init__(self, db, **kwargs):
         gate = MusicDBGate(**kwargs)
         self.verbose = kwargs.get('verbose', False)
-        self.mdbio   = gate.getIO(db)
+        self.mdbio   = gate.getIO(db=db)
         self.sum     = self.mdbio.sum.make
         self.search  = self.mdbio.search.make
         
-        func = "mergeModValData"
-        if hasattr(self.mdbio.prd, func) and callable(getattr(self.mdbio.prd, func)):
-            self.merge = getattr(self.mdbio.prd, func)
         
     def parse(self, force=False):
         poolParseIO(parseFunction=self.mdbio.prd.parse, force=force)
+
+    def merge(self):
+        func = "mergeModValData"
+        if hasattr(self.mdbio.prd, func) and callable(getattr(self.mdbio.prd, func)):
+            poolMergeIO(mergeFunction=getattr(self.mdbio.prd, func))
         
     def meta(self):
         poolMetaModIO(makeFunction=self.mdbio.meta.make)

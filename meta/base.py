@@ -1,11 +1,25 @@
 """ Metadata Base Class """
 
-__all__ = ["MetaDataBase", "MetaDataUtilsBase", "SummaryDataBase", "MediaTypeRankBase"]
+__all__ = ["MetaDataBase", "MetaDataUtilsBase", "SummaryDataBase", "MediaTypeRankBase", "SearchOmitBase"]
 
 from master import MasterParams
 from base import RawDataBase, MusicDBBaseData
 from utils import MusicDBArtistName
 from pandas import Series
+
+#########################################################################################################################################################
+# SearchOmit Data Base
+#########################################################################################################################################################
+class SearchOmitBase:
+    def __init__(self, **kwargs):
+        self.verbose = kwargs.get('verbose', False)
+        self.omit = {}
+        
+    def get(self):
+        return self
+    
+    def save(self):
+        return
 
 #########################################################################################################################################################
 # Summary Data Base

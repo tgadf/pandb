@@ -65,7 +65,7 @@ class MusicDBIDBase:
     def getErr(self):
         return self.err
     
-    def getHashval(self, vals):
+    def getHashval(self, vals, addSize=False):
         if not isinstance(vals, list):
             raise ValueError("Must pass list of values. You passed [{0}]".format(vals))
         m = md5()
@@ -75,6 +75,8 @@ class MusicDBIDBase:
             except:
                 continue
             m.update(enc)
+            if addSize is True:
+                m.update(str(len(val)).encode('utf-8'))
         hashval = m.hexdigest()
         return hashval    
     

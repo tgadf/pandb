@@ -128,3 +128,8 @@ class MusicDBBaseData:
             exec("self.get{0}Filename  = mdbDataIO.getFilename".format(key))
         if self.data.get(key) is None:
             self.data[key] = mdbDataIO
+            
+    def setData(self, key, dataio):
+        exec("self.get{0}Data  = dataio".format(key))
+        self.data[key] = dataio
+        

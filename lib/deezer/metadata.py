@@ -53,6 +53,42 @@ class MetaData(MetaDataBase):
                 eval("self.mdbdata.saveMeta{0}Data".format(meta))(modval=modVal, data=metaData)                        
                     
         if self.verbose: ts.stop()
+            
+            
+    ###############################################################################################################
+    # Bio MetaData
+    ###############################################################################################################
+    def getBioMetaData(self, modValData):
+        artistImage = modValData.apply(self.utils.getImage)
+        artistImage.name = "Image"
+        
+        metaData = DataFrame(artistImage)
+        return metaData
+            
+            
+    ###############################################################################################################
+    # Link MetaData
+    ###############################################################################################################
+    def getLinkMetaData(self, modValData):
+        relatedArtists = modValData.apply(self.utils.getRelatedArtists)
+        relatedArtists.name = "RelatedArtists"
+        
+        metaData = DataFrame(relatedArtists)
+        return metaData
+        
+                    
+    ###############################################################################################################
+    # Link MetaData
+    ###############################################################################################################
+    def getMetricMetaData(self, modValData):
+        artistFans = modValData.apply(self.utils.getFans)
+        artistFans.name = "Followers"
+
+        artistAlbums = modValData.apply(self.utils.getAlbums)
+        artistAlbums.name = "Popularity"
+
+        metaData = DataFrame([artistFans,artistAlbums]).T
+        return metaData
         
     
 
@@ -95,6 +131,22 @@ class DeezerMetaDataUtils(MetaDataUtilsBase):
             
     def getType(self, rData):
         retval = self.getGeneralData(rData, 'Type')
+        return retval
+            
+    def getRelatedArtists(self, rData):
+        retval = self.getExtraData(rData, 'Related')
+        return retval
+            
+    def getFans(self, rData):
+        retval = self.getExtraData(rData, 'Fans')
+        return retval
+            
+    def getImage(self, rData):
+        retval = self.getExtraData(rData, 'Image')
+        return retval
+            
+    def getAlbums(self, rData):
+        retval = self.getExtraData(rData, 'Albums')
         return retval
         
     def getMedia(self, rData, maxNum=500):

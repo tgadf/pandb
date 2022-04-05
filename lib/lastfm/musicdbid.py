@@ -16,8 +16,11 @@ class MusicDBID(MusicDBIDBase):
         self.manc     = MusicDBArtistName()
         self.get      = self.getArtistID
         
-    def getArtistID(self, s):
+    def getArtistID(self, s, **kwargs):
+        verbose = kwargs.get('verbose', False)
         self.s = str(s)
+        if verbose: print("="*150)
+        if verbose: print('  ==>',s)
             
         ######################################################    
         ## Test For Format
@@ -27,6 +30,9 @@ class MusicDBID(MusicDBIDBase):
             return None
         
         up   = urlparse(s)
+        #print('params   :',up.params)
+        #print('fragment :',up.fragment)
+        #print('hostname :',up.hostname)
         if up.scheme not in ['http', 'https']:
             self.err = 'Not http(s)'
             return None
@@ -39,19 +45,29 @@ class MusicDBID(MusicDBIDBase):
             return None
         
         try:
-            artistName = path.split("/")[2]
+            artistPathName = path.split("/")[2]
         except:
             self.err = "Path split error"
             return None
         
-        asciiArtistName = self.quoteIt(artistName)
+        artistNames = artistPathName.split(";")
+        extraNames  = up.params.split(";")
+        if verbose: print('  Name       :',artistNames)
+        if verbose: print('  Extra      :',extraNames)
+        asciiArtistNames = [self.quoteIt(artistName) for artistName in artistNames]
+        extraArtistNames = [self.quoteIt(artistName) for artistName in extraNames]
+        if verbose: print('  Ascii Name :',asciiArtistNames)
+        if verbose: print('  Ascii Extra:',extraArtistNames)
         
         
         ######################################################    
         ## Get Hash
         ######################################################
-        hashval  = self.getHashval([asciiArtistName])
-        artistID = self.getIDFromHash(hashval, 11)
+        hashValData = asciiArtistNames+extraArtistNames
+        if verbose: print('  HashData   :',hashValData)
+        hashval  = self.getHashval(hashValData, addSize=True)
+        artistID = self.getIDFromHash(hashval, 14)
+        if verbose: print('  ArtistID   :',artistID)
         return artistID
     
     def getArtistIDName(self, s):

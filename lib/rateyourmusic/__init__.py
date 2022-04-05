@@ -4,3 +4,4 @@ from .musicdbio import MusicDBIO
 from .parserawdata import ParseRawData
 from .utils import *
 from .metadata import *
+from .searchomit import *
