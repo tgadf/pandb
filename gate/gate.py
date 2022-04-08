@@ -26,7 +26,7 @@ class MusicDBGate:
     #####################################################################################################################################
     # Music DB I/O
     #####################################################################################################################################
-    def getIO(self, db):
+    def getIO(self, db=None):
         if db is None:
             return {db: mdbio() for db,mdbio in self.mdbios.items()}
         assert self.mp.isValid(db) == True,"Must give a valid db, not [{0}]".format(db)

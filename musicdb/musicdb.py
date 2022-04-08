@@ -8,7 +8,7 @@ from gate import MusicDBGate
 from fileutils import DirInfo,FileInfo
 from timeutils import Timestat
 from ioutils import FileIO
-from pandas import to_numeric, DataFrame, Series
+from pandas import to_numeric, DataFrame, Series, concat
 from uuid import uuid4
 
 class MusicDB:
@@ -309,9 +309,9 @@ class MusicDBIO:
         row = {"ArtistName": name}
         row.update({k: v for k,v in kwargs.items() if k in self.mmeDF.columns})
         if len(row) > 1:
-            nRow = Series(row)
-            nRow.name = str(uuid4())
-            self.mmeDF=self.mmeDF.append(nRow)
+            nRow       = Series(row)
+            nRow.name  = str(uuid4())
+            self.mmeDF = concat([self.mmeDF, nRow])
             print("  ==> Added New Row [{0}]".format(nRow))
         else:
             print("Need valid db")

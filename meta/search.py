@@ -7,15 +7,18 @@ from master import MasterParams, MusicDBPermDir
 from timeutils import Timestat
 from fileutils import DirInfo,FileInfo
 from ioutils import FileIO
-from pandas import Series
+from pandas import Series, notna
 from .base import SummaryDataBase
 
 class SearchData(SummaryDataBase):
     def __init__(self, mdbdata, **kwargs):
         super().__init__(mdbdata, **kwargs)
         
+
     def isSearchable(self, counts):
-        retval = counts["Album"] >= 2 or counts["SingleEP"] >= 2
+        reqMedia  = counts["Album"] >= 2 or counts["SingleEP"] >= 2
+        reqName   = isinstance(counts["Name"],str) and len(counts["Name"]) > 0
+        retval    = reqMedia and reqName
         return retval
     
     def makeSearchable(self, value):
@@ -42,18 +45,16 @@ class SearchData(SummaryDataBase):
         omit.loadIDs()
         if self.verbose: print("  ==> Found {0} IDs To Ignore".format(len(self.omit.omit)))
 
-        artistCountsData  = self.mdbdata.getSummaryCountsData()        
+        artistCountsData  = self.mdbdata.getSummaryCountsData().join(self.mdbdata.getSummaryNameData())
         searchableResults = artistCountsData.apply(self.isSearchable, axis=1)
         
         for key in self.searchTypes:
-            summaryData = eval("self.mdbdata.getSummary{0}Data".format(key))()
-            searchData  = summaryData.loc[searchableResults].apply(self.makeSearchable)
-            nSearchable = len(searchData)
-            searchData  = searchData[searchData.index.map(omit.isValid)]
-            nNotIgnored = len(searchData)
-
+            summaryData    = eval("self.mdbdata.getSummary{0}Data()".format(key))
+            searchableData = summaryData.loc[searchableResults]
+            searchData     = searchableData.apply(self.makeSearchable)
+            searchData     = searchData[searchData.index.map(omit.isValid)]
             searchData.name = key
-            if verbose: print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(nNotIgnored, nSearchable, len(summaryData), "ID => {0}".format(key)))
+            if verbose: print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(len(searchData), len(searchableData), len(summaryData), "ID => {0}".format(key)))
             eval("self.mdbdata.saveSearch{0}Data".format(key))(data=searchData)
         
         if verbose: ts.stop()

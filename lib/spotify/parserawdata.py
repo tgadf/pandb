@@ -136,6 +136,16 @@ class ParseRawData(ParseRawDataBase):
         if self.verbose: print("  ===> Saving [{0}] {1} Entries".format(len(modValData), "DB Data"))
         self.prdutils.saveModValData(modVal, modValData)
 
-    def mergeModValData(self):
-        for modVal in range(self.mv.maxModVal):
+    def mergeModValData(self, modVal=None, **kwargs):
+        mp           = MasterParams()
+        modVals      = list(mp.getModVals()) if modVal is None else [modVal]
+        self.verbose = kwargs.get('verbose', False) if kwargs.get('verbose') is not None else self.verbose
+        if self.verbose: ts = Timestat("Creating {0} ModVal Data".format(len(modVals)))
+            
+        for n,modVal in enumerate(modVals):
+            if self.verbose:
+                if (n+1) % 25 == 0 or (n+1) == 5:
+                    ts.update(n=n,N=len(modVals))
             self.mergeModValFileTypeData(modVal)
+
+        if self.verbose: ts.stop()

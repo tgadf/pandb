@@ -22,8 +22,14 @@ class MatchListDataNames:
     def match(self):
         retval = {}
         ts = Timestat("Matching Master {0} Artists Against {1} List Artists".format(len(self.artistsToMatch), self.listDataToGet.shape[0]))
+        if len(self.artistsToMatch) > 5000:
+            modVal = 1000
+        elif len(self.artistsToMatch) > 1000:
+            modVal = 250
+        else:
+            modVal = 100
         for n,artistName in enumerate(self.artistsToMatch):
-            if (n+1) % 250 == 0:
+            if (n+1) % modVal == 0 or (n+1) == modVal/2:
                 ts.update(n=n+1,N=self.artistsToMatch.shape[0])
             results = self.mdbm.match(value=artistName)
             idx = results[results >= self.cutoff]
@@ -49,8 +55,14 @@ class MatchListDataRefs:
     def match(self):
         retval = {}
         ts = Timestat("Matching Master {0} Artists Against {1} List Artists".format(len(self.artistsToMatch), self.listDataToGet.shape[0]))
+        if len(self.artistsToMatch) > 5000:
+            modVal = 1000
+        elif len(self.artistsToMatch) > 1000:
+            modVal = 250
+        else:
+            modVal = 100
         for n,artistRef in enumerate(self.artistsToMatch):
-            if (n+1) % 250 == 0:
+            if (n+1) % modVal == 0 or (n+1) == modVal/2:
                 ts.update(n=n+1,N=self.artistsToMatch.shape[0])
             results = self.mdbm.match(value=artistRef)
             idx = results[(results >= self.cutoff) & (results < self.maxCutoff)]

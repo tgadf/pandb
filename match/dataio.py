@@ -25,50 +25,62 @@ class MatchDBDataIO:
         if self.verbose: print("  MatchDBData({0}):".format(db))
         
         
-    def loadData(self):
-        if isinstance(self.mediaMatchData,DataFrame):
-            return
-        mdbio = self.mdbio
-        if self.verbose: print("  ==> Loading Data")
-        basicData = DataFrame(mdbio.data.getSearchNameData()).join(mdbio.data.getSummaryNumAlbumsData()).sort_values(by="NumAlbums", ascending=False)
-        if self.verbose: print("   Found {0: >7} Artists Basic Data In {1} DB".format(basicData.shape[0], mdbio.db))
-            
-        countsData = mdbio.data.getSummaryCountsData()
+    ############################################################################################################################################
+    # Load DB Data
+    ############################################################################################################################################
+    def loadBasicData(self):
+        self.basicData = DataFrame(self.mdbio.data.getSearchNameData()).join(self.mdbio.data.getSummaryNumAlbumsData()).sort_values(by="NumAlbums", ascending=False)
+        if self.verbose: print("   Found {0: >7} Artists Basic Data In {1} DB".format(self.basicData.shape[0], self.mdbio.db))
+        
+    def loadCountsData(self):
+        countsData = self.mdbio.data.getSummaryCountsData()
         countsData = countsData[[name.replace("Media","") for name in self.mediaTypes]]
         countsData = countsData.rename(columns={col: "Num{0}".format(col) for col in countsData.columns})
         countsData["NumMedia"] = countsData.sum(axis=1)
-
+        self.countsData = countsData
+        
+    def loadMediaData(self):
         mediaData = []
         for mediaType in self.mediaTypes:
-            mediaData.append(eval("mdbio.data.getSearch{0}Data()".format(mediaType)))
-        mediaData = concat(mediaData, axis=1)
-        #mediaData["NumMedia"] = concat([mediaData[mediaType].apply(lambda media: len(media) if isinstance(media,list) else 0) for mediaType in self.mediaTypes], axis=1).sum(axis=1)
-        if self.verbose: print("   Found {0: >7} Artists Media Data In {1} DB".format(mediaData.shape[0], mdbio.db))
+            mediaData.append(eval("self.mdbio.data.getSearch{0}Data()".format(mediaType)))  ## This does not work with list comprehension
+        self.mediaData = concat(mediaData, axis=1)
+        if self.verbose: print("   Found {0: >7} Artists Media Data In {1} DB".format(self.mediaData.shape[0], self.mdbio.db))
+        
+        
+    def loadData(self):
+        if isinstance(self.mediaMatchData,DataFrame):
+            return
+            
+        if self.verbose: print("  ==> Loading Data")
+        self.loadBasicData()
+        self.loadCountsData()
+        self.loadMediaData()
             
         if isinstance(self.mask,str) or (isinstance(self.mask,bool) and self.mask is True):
             if self.verbose: print("     ==> Masking Out Previously Found Artists")
             pdbio  = PanDBIO()
             pdbio.setData()
             if isinstance(self.mask,str):
-                knownData = pdbio.getNotNaDBIDs(mdbio.db)
-                knownIDs  = knownData[knownData[self.mask].notna()][mdbio.db]
+                knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
+                knownIDs  = knownData[knownData[self.mask].notna()][self.mdbio.db]
             elif self.mask is True:
-                knownData = pdbio.getNotNaDBIDs(mdbio.db)
-                knownIDs  = knownData[mdbio.db]
+                knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
+                knownIDs  = knownData[self.mdbio.db]
             else:
                 raise TypeError("Unknown type for mask")
             if self.verbose: print("   Found {0: >7} Previously Cross Matched Artists".format(knownIDs.shape[0]))
             
-            basicData  = basicData[~basicData.index.isin(knownIDs)]
-            if self.verbose: print("   Found {0: >7} Artists Basic Data In {1} DB".format(basicData.shape[0], mdbio.db))
-            mediaData  = mediaData[~mediaData.index.isin(knownIDs)]
-            if self.verbose: print("   Found {0: >7} Artists Media Data In {1} DB".format(basicData.shape[0], mdbio.db))
+            self.basicData  = self.basicData[~self.basicData.index.isin(knownIDs)]
+            if self.verbose: print("   Found {0: >7} Artists In {1} DB".format(self.basicData.shape[0], self.mdbio.db))
             
             del pdbio
             
-        self.mediaMatchData = basicData.join(countsData).join(mediaData)
+        self.mediaMatchData = self.basicData.join(self.countsData).join(self.mediaData)
         
         
+    ############################################################################################################################################
+    # Get Data We Want
+    ############################################################################################################################################
     def getData(self, **kwargs):
         albums   = kwargs.get("albums")
         if albums is not None:
