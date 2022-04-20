@@ -15,6 +15,7 @@ class MusicDBID(MusicDBIDBase):
         self.patterns = None
         self.manc     = MusicDBArtistName()
         self.get      = self.getArtistID
+        self.short    = "lfm"
         
     def getArtistID(self, s, **kwargs):
         verbose = kwargs.get('verbose', False)

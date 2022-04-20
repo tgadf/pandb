@@ -25,7 +25,8 @@ class SummaryData(SummaryDataBase):
     ###########################################################################################################################################################
     # Master Maker
     ###########################################################################################################################################################
-    def make(self, sumtype=None):
+    def make(self, sumtype=None, **kwargs):
+        self.verbose = kwargs.get('verbose', self.verbose)
         dbsums = {summaryType: summaryTypeFunc for summaryType,summaryTypeFunc in self.dbsums.items() if ((isinstance(sumtype,str) and summaryType == sumtype) or (sumtype is None))}
         for summaryType,summaryTypeFunc in dbsums.items():
             summaryTypeFunc()

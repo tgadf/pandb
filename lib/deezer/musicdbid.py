@@ -14,6 +14,7 @@ class MusicDBID(MusicDBIDBase):
         patterns += [r'([\d]+)']
         self.patterns = patterns
         self.get = self.getArtistID
+        self.short = "dz"
 
     def getArtistID(self, s):
         self.s = str(s)

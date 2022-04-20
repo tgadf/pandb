@@ -15,6 +15,7 @@ class MusicDBID(MusicDBIDBase):
         patterns += [r'Artist([\d]+)']
         self.patterns = patterns
         self.get = self.getArtistID
+        self.short = "rym"
         
     def getBS4Input(self, bsdata):
         ipt = bsdata.find("input", {"class": "rym_shortcut"})

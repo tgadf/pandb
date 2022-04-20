@@ -7,7 +7,7 @@ from master import MasterParams, MusicDBPermDir
 from timeutils import Timestat
 from fileutils import DirInfo,FileInfo
 from ioutils import FileIO
-from pandas import Series, notna
+from pandas import Series, DataFrame, notna
 from .base import SummaryDataBase
 
 class SearchData(SummaryDataBase):
@@ -50,12 +50,13 @@ class SearchData(SummaryDataBase):
         
         for key in self.searchTypes:
             summaryData    = eval("self.mdbdata.getSummary{0}Data()".format(key))
-            searchableData = summaryData.loc[searchableResults]
-            searchData     = searchableData.apply(self.makeSearchable)
-            searchData     = searchData[searchData.index.map(omit.isValid)]
-            searchData.name = key
-            if verbose: print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(len(searchData), len(searchableData), len(summaryData), "ID => {0}".format(key)))
-            eval("self.mdbdata.saveSearch{0}Data".format(key))(data=searchData)
+            if isinstance(summaryData,(DataFrame,Series)):
+                searchableData = summaryData.loc[searchableResults]
+                searchData     = searchableData.apply(self.makeSearchable)
+                searchData     = searchData[searchData.index.map(omit.isValid)]
+                searchData.name = key
+                if verbose: print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(len(searchData), len(searchableData), len(summaryData), "ID => {0}".format(key)))
+                eval("self.mdbdata.saveSearch{0}Data".format(key))(data=searchData)
         
         if verbose: ts.stop()
             

@@ -13,18 +13,15 @@ class AlbumReq:
         assert(any([isinstance(x,int) for x in [self.minAlbums,self.maxAlbums,self.topAlbums]])), "Need to specify album quantity"
         
 
-    def validAlbums(self, numAlbums: Series) -> 'Series':
+    def valid(self, numAlbums: Series) -> 'Series':
         albums    = numAlbums.sort_values(ascending=False)
         maxAlbums = self.maxAlbums if isinstance(self.maxAlbums,int) else numAlbums.max()+1
         minAlbums = self.minAlbums if isinstance(self.minAlbums,int) else numAlbums.min()
 
         idx = (albums < maxAlbums) & (albums >= minAlbums)
         
-        if isinstance(self.topAlbums,int):
-            minAlbums = albums[idx].head(self.topAlbums).min()
-            idx = idx * albums >= minAlbums
-            
-        return idx
+        retval = albums[idx].head(self.topAlbums).index if isinstance(self.topAlbums,int) else albums[idx].index            
+        return retval
     
         
     def validAlbumsX(self, numAlbums: Series) -> 'Series':

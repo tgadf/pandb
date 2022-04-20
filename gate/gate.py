@@ -3,7 +3,7 @@
 __all__ = ["MusicDBGate"]
 
 from importlib import import_module
-from master import MasterParams
+from master import MasterDBs
 from pandas import DataFrame
 
 #########################################################################################################################################################
@@ -12,11 +12,10 @@ from pandas import DataFrame
 class MusicDBGate:
     def __init__(self, **kwargs):
         self.verbose = kwargs.get('verbose', False)
-        mp = MasterParams()
-        self.mp      = mp
-        self.getDBs  = mp.getDBs
-        self.modVals = mp.getModVals(listIt=True)
-        self.mdbios = {db: getattr(import_module('lib.{0}'.format(db.lower())), "MusicDBIO") for db in self.getDBs()}
+        mdbs = MasterDBs()
+        self.getDBs  = mdbs.getDBs
+        self.modVals = mdbs.getModVals(listIt=True)
+        self.mdbios = {db: getattr(import_module('lib.{0}'.format(db.lower())), "MusicDBIO") for db in mdbs.getDBs()}
         
         if self.verbose:
             print("MusicDBGate()")

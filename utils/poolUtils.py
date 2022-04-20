@@ -2,7 +2,7 @@
 
 __all__ = ["PoolIO", "poolParseIO", "poolMetaModIO", "poolMetaDBIO", "poolMergeIO", "poolSummaryIO", "poolDataFrame", "CompareData"]
 
-from gate import MusicDBGate
+from gate import IOStore
 from master import MasterParams
 from timeutils import Timestat
 from functools import partial
@@ -220,9 +220,9 @@ def poolDataFrame(df, func, n_cores=3):
     
 class PoolIO:
     def __init__(self, db, **kwargs):
-        gate = MusicDBGate(**kwargs)
         self.verbose = kwargs.get('verbose', False)
-        self.mdbio   = gate.getIO(db=db)
+        ios          = IOStore(verbose=self.verbose)
+        self.mdbio   = ios.get(db=db)
         self.sum     = self.mdbio.sum.make
         self.search  = self.mdbio.search.make
         

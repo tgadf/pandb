@@ -2,7 +2,7 @@
 
 __all__ = ["ParseRawData"]
          
-from master import MasterParams
+from master import MasterBasic
 from base import MusicDBBaseData, MusicDBBaseDirs
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
@@ -102,71 +102,25 @@ class ParseRawData:
     #####################################################################################################################
     # Merge Parsed Data
     #####################################################################################################################
+    def mergeModValFileTypeData(self, modVal):
+        if self.verbose: ts = Timestat("Merging ModVal={0} Raw {1} Files()".format(modVal, self.db))
+
+        modValFileTypeData = [self.prdutils.getFileTypeModValData(modVal, fileType) for fileType in self.fileTypes]
+        modValData = self.prdutils.mergeModValFileTypeData(*modValFileTypeData)
+
+        if self.verbose: print("  ===> Saving [{0}] {1} Entries".format(len(modValData), "DB Data"))
+        self.prdutils.saveModValData(modVal, modValData)
+
     def mergeModValData(self, modVal=None, **kwargs):
-        mp = MasterParams()
-        modVals = list(mp.getModVals()) if modVal is None else [modVal]
+        mb           = MasterBasic()
+        modVals      = mb.getModVals(listIt=True) if modVal is None else [modVal]
         self.verbose = kwargs.get('verbose', False) if kwargs.get('verbose') is not None else self.verbose
         if self.verbose: ts = Timestat("Creating {0} ModVal Data".format(len(modVals)))
             
-            
-        ##############################################################################
-        # Get Extra Info Data
-        ##############################################################################
-        artistRelatedData = self.prdutils.mdbdata.getRelatedArtistsData()
-        artistRelatedData.name = "RelatedArtists"
-        artistRelatedData = DataFrame(artistRelatedData)
-        artistInfoData    = self.prdutils.mdbdata.getArtistsInfoData()
-        extraInfoData     = artistInfoData.join(artistRelatedData)
-        
-        
-        modVals=[0]
-        for i,modVal in enumerate(modVals):
-            if (i+1) % 25 == 0 or (i+1) == 5:
-                if self.verbose: ts.update(n=i+1, N=len(modVals))
+        for n,modVal in enumerate(modVals):
+            if self.verbose:
+                if (n+1) % 25 == 0 or (n+1) == 5:
+                    ts.update(n=n,N=len(modVals))
+            self.mergeModValFileTypeData(modVal)
 
-            modValData = {}
-            psModVals = list(mp.getModVals())
-            if self.verbose: tsPS = Timestat("Loading Pseudo ModVal={0} Data".format(modVal))
-            for j,psModVal in enumerate(psModVals):
-                if (j) % 25 == 0 and j > 0:
-                    if self.verbose: tsPS.update(n=j, N=len(psModVals))
-                key = "{0}-{1}".format(psModVal,modVal)
-                
-                fileType = self.fileTypes[0]
-                cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
-                modValFileTypeData = eval(cmd)
-                if modValFileTypeData is None:
-                    continue                    
-                for artistID,artistIDData in modValFileTypeData.iteritems():
-                    if modValData.get(artistID) is None:
-                        ###########################################################################
-                        # Append Extra Info Data (if available)
-                        ###########################################################################
-                        if artistID in extraInfoData.index:
-                            profile = artistIDData.profile
-                            extraData = getattr(profile, 'extra') if hasattr(profile, 'extra') else {}
-                            if isinstance(extraData,dict):
-                                extraData['Image']   = extraInfoData.loc[artistID, 'picture']
-                                extraData['Albums']  = extraInfoData.loc[artistID, 'albums']
-                                extraData['Fans']    = extraInfoData.loc[artistID, 'fans']
-                                extraData['Related'] = extraInfoData.loc[artistID, 'RelatedArtists']
-                            if len(extraData) > 0:
-                                artistIDData.profile.extra = extraData
-                        modValData[artistID] = artistIDData
-                
-                for fileType in self.fileTypes[1:]:
-                    cmd = "self.prdutils.mdbdata.getModVal{0}Data(key)".format(fileType)
-                    modValFileTypeData = eval(cmd)
-                    if modValFileTypeData is None:
-                        continue
-                    for artistID,artistIDData in modValFileTypeData.iteritems():
-                        if modValData.get(artistID) is None:
-                            modValData[artistID] = artistIDData
-                        else:
-                            modValData[artistID].media.media = self.prdutils.mergeMediaData(modValData[artistID].media.media, artistIDData.media.media)
-                            modValData[artistID].mediaCounts.counts = self.prdutils.updateMediaCounts(modValData[artistID].media.media)
-                                
-            if self.verbose: tsPS.stop()
-                
-            if self.verbose: print("  ===> Saving [{0}] ModVal={1} {2} Entries".format(len(modValData), modVal, "DB Data"))
-            self.prdutils.saveModValData(modVal=modVal, modValData=modValData)
+        if self.verbose: ts.stop()

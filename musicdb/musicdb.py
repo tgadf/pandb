@@ -1,17 +1,17 @@
 """ Primary Music Database """
 
-__all__ = ["MusicDB", "MusicDBIO"]
+__all__ = ["PanDB", "PanDBIO"]
 
 from base import MusicDBDir, MusicDBData
-from master import MasterParams, MusicDBPermDir
-from gate import MusicDBGate
+from master import MasterParams, MusicDBPermDir, MasterDBs
+from gate import IOStore, IDStore
 from fileutils import DirInfo,FileInfo
 from timeutils import Timestat
 from ioutils import FileIO
 from pandas import to_numeric, DataFrame, Series, concat
 from uuid import uuid4
 
-class MusicDB:
+class PanDB:
     def __init__(self, **kwargs):
         mdbpd = MusicDBPermDir()
         self.data = {}
@@ -22,6 +22,9 @@ class MusicDB:
                                    
         ############ Add Names ############
         self.addData("", MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname="manualEntries"), fname=True)
+        self.mdbs = MasterDBs()
+        for db in self.mdbs.getDBs():
+            self.addData(db, MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=db), fname=False)
             
 
     def addData(self, key, mdbDataIO, fname=False):
@@ -38,10 +41,15 @@ class MusicDB:
 ####################################################################################################################    
 ## Summary
 ####################################################################################################################    
-class MusicDBIO:
+class PanDBIO:
     def __init__(self, **kwargs):
-        self.mdb      = MusicDB(**kwargs)
+        self.mdb      = PanDB(**kwargs)
+        self.ids      = IDStore()        
         self.mmeDF    = None
+        for db,mdbDataIO in self.mdb.data.items():
+            if len(db) > 0:
+                exec("self.get{0}Data  = self.mdb.get{0}Data".format(db))
+            
         
         
     ####################################################################################################################    
@@ -58,6 +66,14 @@ class MusicDBIO:
         mmeDF = self.mmeDF if mmeDF is None else mmeDF
         print("Saving Master DataFrame To {0}".format(self.mdb.getFilename().str))
         self.mdb.saveData(data=mmeDF)
+        
+        mdbs = MasterDBs()
+        for col,colData in mmeDF.iteritems():
+            if mdbs.isValid(col):
+                values  = colData[colData.notna()].values
+                eval("self.mdb.save{0}Data(data = values)".format(col))
+                #mdbdata = MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=col)
+                #mdbdata.save(data=values)        
         
     def isValid(self, db):
         if not isinstance(self.mmeDF,DataFrame):
@@ -80,8 +96,7 @@ class MusicDBIO:
     ####################################################################################################################
     def addMetrics(self):
         ts = Timestat("Adding Metrics To PanDB")
-        gate     = MusicDBGate()
-        mdbios   = gate.getIO()
+        ios = IOStore()
 
         ######################################################################
         # Get PanDB
@@ -91,7 +106,10 @@ class MusicDBIO:
         ######################################################################
         # Calculations
         ######################################################################
-        dbAlbums = {db: mdbio.data.getSummaryNumAlbumsData() for db,mdbio in mdbios.items()}
+        dbAlbums = {}
+        for db,mdbio in ios.get().items():
+            numAlbums = mdbio.data.getSummaryNumAlbumsData()
+            dbAlbums[db] = numAlbums if isinstance(numAlbums,Series) else Series(dtype='object')
         dfAlbums = DataFrame({db: to_numeric(dbIDMatches.apply(dbAlbums[db].get), errors='coerce') for db,dbIDMatches in self.mmeDF.items() if db in dbAlbums})
         dfRank   = DataFrame({db: dbIDs[dbIDs.notna()].rank(pct=True) for db,dbIDs in dfAlbums.items()}).fillna(0.0).mean(axis=1).rank(pct=True)
         dfRank.name = "Rank"
@@ -202,7 +220,7 @@ class MusicDBIO:
         return self.mmeDF[self.mmeDF[db] == str(dbID)]
     
     def getMMEByMBURL(self, url):
-        mbID = self.getmbid(url)
+        mbID = self.ids.getmbid(url)
         return self.getMMEByID('MusicBrainz', mbID)
 
     def getMMEByArtist(self, name, match="E"):
@@ -272,11 +290,10 @@ class MusicDBIO:
         self.setdbid(idx, "AllMusic", dbID)
     
     def setmburl(self, idx, url):
-        self.setdbid(idx, "MusicBrainz", self.getmbid(url))
+        self.setdbid(idx, "MusicBrainz", self.ids.getmbid(url))
     
     def setlfmurl(self, idx, url):
-        self.setdbid(idx, "LastFMAPI", self.getmbid(url))
-        self.setdbid(idx, "LastFM", self.getmbid(url))
+        self.setdbid(idx, "LastFM", self.ids.getmbid(url))
 
     def setspotid(self, idx, dbID):
         self.setdbid(idx, "Spotify", dbID)
@@ -305,16 +322,12 @@ class MusicDBIO:
         self.mmeDF.drop([idx], axis=0, inplace=True)
         print("  ==> Dropped Row [{0}]".format(idx))
 
-    def newArtist(self, name, **kwargs):
-        row = {"ArtistName": name}
-        row.update({k: v for k,v in kwargs.items() if k in self.mmeDF.columns})
-        if len(row) > 1:
-            nRow       = Series(row)
-            nRow.name  = str(uuid4())
-            self.mmeDF = concat([self.mmeDF, nRow])
-            print("  ==> Added New Row [{0}]".format(nRow))
-        else:
-            print("Need valid db")
+    def newArtist(self, name, **dbids):
+        rowData = {**{"ArtistName": name}, **dbids}
+        row = DataFrame(Series(rowData, name=str(uuid4()))).T
+        self.mmeDF = concat([self.mmeDF,row], axis=0)
+        print("  ==> Added New Row [{0}]".format(rowData))
+
 
     def mergeRows(self, idx1, idx2):
         for db,dbID in self.mmeDF.loc[idx2][self.mmeDF.loc[idx2].notna()].iteritems():

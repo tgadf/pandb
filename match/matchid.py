@@ -2,19 +2,24 @@
 
 __all__ = ["MatchID"]
 
-from musicdb import MusicDBIO
-from pandas import DataFrame, Series, notna, isna
+from musicdb import PanDBIO
+from pandas import DataFrame, Series, notna, isna, concat
+from uuid import uuid4
 from .matchdb import MatchDB
 
 class MatchID:
     def __init__(self, baseDB: str, mdb: MatchDB, **kwargs):
         self.verbose = kwargs.get('verbose', True)
         if self.verbose: print("MatchID()")
+        
+        ###################################################################################################################
+        # Access To Pan DB
+        ###################################################################################################################        
+        self.pdbio   = PanDBIO()
+        self.pdbio.setData()
             
         self.baseDB  = baseDB
         self.mdb     = mdb
-        self.pdbio   = MusicDBIO()
-        self.pdbio.setData()
         self.dbMatchResult = None
         self.compareDBs    = []
         
@@ -117,6 +122,7 @@ class MatchID:
             print("  ==> No matched results. Not matching to master DB")
             return
         
+        
         ###################################################################################################################
         # Existing Artists
         ###################################################################################################################        
@@ -132,18 +138,17 @@ class MatchID:
         ###################################################################################################################
         # New Artists With 3+ Matches
         ###################################################################################################################
-        for idx,row in self.toMerge["GoodMatch"].iterrows():
-            name  = str(row["Name"])
-            dbids = {db: dbid for db,dbid in row.drop(["Name", "MasterID"]).to_dict().items() if notna(dbid)}
-            self.pdbio.newArtist(name=name, **dbids)
+        mmeDF = self.pdbio.getData()
+        newArtists = self.toMerge["GoodMatch"].drop(["MasterID"], axis=1).rename(columns={"Name": "ArtistName"})
+        newArtists.index = [str(uuid4()) for i in newArtists.index]
+        mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
             
             
         ###################################################################################################################
         # New Artists With 2+ Matches
         ###################################################################################################################
-        for idx,row in self.toMerge["OkMatch"].iterrows():
-            name  = str(row["Name"])
-            dbids = {db: dbid for db,dbid in row.drop(["Name", "MasterID"]).to_dict().items() if notna(dbid)}
-            self.pdbio.newArtist(name=name, **dbids)
-            
-        self.pdbio.saveData()
+        newArtists = self.toMerge["OkMatch"].drop(["MasterID"], axis=1).rename(columns={"Name": "ArtistName"})
+        newArtists.index = [str(uuid4()) for i in newArtists.index]
+        mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
+                        
+        self.pdbio.saveData(mmeDF)

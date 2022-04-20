@@ -1,6 +1,6 @@
 """ Master Param Data """
 
-__all__ = ["MasterParams", "MasterDBs", "MasterMetas", "MasterPaths"]
+__all__ = ["MasterParams", "MasterDBs", "MasterMetas", "MasterPaths", "MasterBasic"]
 
 from fileutils import DirInfo
 
@@ -10,7 +10,7 @@ from fileutils import DirInfo
 class MasterDBs:
     def __init__(self, **kwargs):
         verbose = kwargs.get('verbose', False)
-        self.dbs = ["Discogs", "Spotify", "LastFM", "Genius", "RateYourMusic", "MetalArchives", "Deezer", "AllMusic", "MusicBrainz", "AlbumOfTheYear", "SetListFM", "Beatport"]
+        self.dbs = ["Discogs", "Spotify", "LastFM", "Genius", "RateYourMusic", "MetalArchives", "Deezer", "AllMusic", "MusicBrainz", "AlbumOfTheYear", "SetListFM", "Beatport", "Traxsource"]
         self.valid = {db: True for db in self.dbs}
         if verbose is True:
             print("MasterDBs()")
@@ -30,9 +30,10 @@ class MasterMetas:
     def __init__(self, **kwargs):
         verbose = kwargs.get('verbose', False)
         self.medias = {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
+        self.mediaAlbums = [self.medias['A'],self.medias['B']]
         self.metas  = {"Basic": ["Name", "Ref", "NumAlbums"], "Media": ["{0}Media".format(media) for media in self.medias.values()],
                        "Genre": ["Genre"], "Bio": ["Bio"], "Link": ["Link"], "Metric": ["Metric"], "Counts": ["Counts"]}
-        self.searches = ["Name"] + ["{0}Media".format(media) for media in ["Album", "SingleEP"]]
+        self.searches = ["Name"] + ["{0}Media".format(media) for media in ["Album", "SingleEP", "Appearance", "Technical", "Mix", "Bootleg", "AltMedia", "Other"]]
         if verbose is True:
             print("MasterMetas()")
             print("{0: <18}{1}".format("  ==> Media:", list(self.medias.values())))
@@ -89,25 +90,22 @@ class MasterPaths:
 
     def getSumPath(self):
         return self.sumPath
-        
 
+        
 ##################################################################################################################################
-# Master List of Params
+# Master Basic Info
 ##################################################################################################################################
-class MasterParams():
+class MasterBasic:
     def __init__(self, **kwargs):
         verbose = kwargs.get('verbose', False)
-        for mCls in [MasterPaths(**kwargs), MasterMetas(**kwargs), MasterDBs(**kwargs)]:
-            for method in [attribute for attribute in dir(mCls) if callable(getattr(mCls, attribute)) and attribute.startswith('__') is False]:
-                exec("self.{0} = mCls.{0}".format(method))
         self.maxModValue = 100
         self.projectName = "pandb"
-        self.musicdbName = "musicdb"        
+        self.musicdbName = "musicdb"  
         if verbose is True:
-            print("MasterParams()")
+            print("MasterBasic()")
             print("{0: <18}{1}".format("  ==> ModVals:", self.maxModValue))
             print("{0: <18}{1}".format("  ==> Project:", self.getProjectName()))
-            print("{0: <18}{1}".format("  ==> MusicDB:", self.getMusicDBName()))
+            print("{0: <18}{1}".format("  ==> MusicDB:", self.getMusicDBName())) 
 
     def getMaxModVal(self):
         return self.maxModValue
@@ -122,3 +120,14 @@ class MasterParams():
 
     def getMusicDBName(self):
         return self.musicdbName
+        
+
+##################################################################################################################################
+# Master List of Params
+##################################################################################################################################
+class MasterParams():
+    def __init__(self, **kwargs):
+        verbose = kwargs.get('verbose', False)
+        for mCls in [MasterBasic(**kwargs),MasterPaths(**kwargs), MasterMetas(**kwargs), MasterDBs(**kwargs)]:
+            for method in [attribute for attribute in dir(mCls) if callable(getattr(mCls, attribute)) and attribute.startswith('__') is False]:
+                exec("self.{0} = mCls.{0}".format(method))
