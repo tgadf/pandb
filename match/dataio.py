@@ -26,13 +26,23 @@ class MatchDBDataIO:
         self.mediaTypes = mediaTypes if isinstance(mediaTypes,list) else list(MasterMetas().getMedias().values())
         assert isinstance(self.mediaTypes,list), "MediaTypes must be a list"
                 
+        self.possibleIDs    = None
+        self.possibleIDDF   = None
+        self.crossCheck     = False
+        self.crossCheckIDs  = None
+        self.crossCheckIDDF = None
+        
         self.namesData      = None
-        self.availableIDs   = None
-        self.availableIDDF  = None
         self.mediaData      = None
         self.mediaMatchData = None
         
         if self.verbose: print("  MatchDBData({0}):".format(db))
+            
+    ############################################################################################################################################
+    # Utils
+    ############################################################################################################################################
+    def setCrossCheck(self, value: bool):
+        self.crossCheck = value
         
         
     ############################################################################################################################################
@@ -87,26 +97,45 @@ class MatchDBDataIO:
             
         self.namesData = self.basicData.join(self.countsData)
         if self.verbose: write(4, "Found {0: >7} Available Artists In {1} DB", (self.namesData.shape[0], self.mdbio.db))
+        
+        if self.isBase:
+            write(4, "{0: >7} Max Albums", self.namesData["NumMedia"].max())
+            write(4, "{0: >7} Min Albums", self.namesData["NumMedia"].min())
+        
+            
         del self.basicData
         del self.countsData
         
     def getNumNames(self):
-        assert isinstance(self.availableIDs, (list,Index)), "loadNames() must be called"
-        return len(self.availableIDs)
+        if self.crossCheck is False:
+            assert isinstance(self.possibleIDs, (list,Index)), "loadNames() must be called"
+            return len(self.possibleIDs)
+        else:
+            assert isinstance(self.crossCheckIDs, (list,Index)), "loadNames() must be called"
+            return len(self.crossCheckIDs)
     
     def getAvailableNames(self):
         assert isinstance(self.namesData, DataFrame), "loadNames() must be called"
-        assert isinstance(self.availableIDDF, DataFrame), "setAvailableNames() must be called"
-        return self.availableIDDF.join(self.namesData)["Name"]
+        if self.crossCheck is False:
+            assert isinstance(self.possibleIDDF, DataFrame), "setAvailableNames() must be called"
+            return self.possibleIDDF.join(self.namesData)["Name"]
+        else:
+            assert isinstance(self.crossCheckIDDF, DataFrame), "setAvailableNames() must be called"
+            return self.crossCheckIDDF.join(self.namesData)["Name"]
         
     def setAvailableNames(self, req: Union[AlbumReq,Index,list]):
         assert isinstance(self.namesData, DataFrame), "loadNames() must be called"
-        if isinstance(req, AlbumReq):
-            self.availableIDs = req.valid(self.namesData["NumMedia"])
-            self.availableIDDF = DataFrame(index=self.availableIDs)
-        #elif isinstance(req, (Index,list)):
-        #    self.availableIDs = req
-        #    self.availableIDDF = DataFrame(index=self.availableIDs)
+        if self.crossCheck is False:
+            if isinstance(req, AlbumReq):
+                self.possibleIDs  = req.valid(self.namesData["NumMedia"])
+                self.possibleIDDF = DataFrame(index=self.possibleIDs)
+        else:
+            if isinstance(req, AlbumReq):
+                self.crossCheckIDs  = req.valid(self.namesData["NumMedia"])
+                self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
+            elif isinstance(req, (Index,list)):
+                self.crossCheckIDs  = req
+                self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
         
         
     ############################################################################################################################################
@@ -140,7 +169,13 @@ class MatchDBDataIO:
     
     def getAvailableMedia(self) -> 'DataFrame':
         assert isinstance(self.mediaData, Series), "loadMedia() must be called"
-        retval = self.mediaData[self.availableIDs] if self.isBase is True else self.mediaData
+        #print("getAvailableMedia:",self.db)
+        if self.crossCheck is False:
+            #print("getAvailableMedia:",self.db,'possible',len(self.possibleIDs))
+            retval = self.mediaData[self.possibleIDs] if self.isBase is True else self.mediaData
+        else:
+            #print("getAvailableMedia:",self.db,'crossCheck',len(self.crossCheckIDs))
+            retval = self.mediaData if self.isBase is True else self.mediaData[self.crossCheckIDs]
         return retval
                 
             

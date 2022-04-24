@@ -70,7 +70,10 @@ class MetaData(MetaDataBase):
         memberOf = modValData.apply(self.utils.getMemberOf)
         memberOf.name = "MemberOf"
 
-        metaData = DataFrame([alsoKnownAs,members,memberOf]).T
+        related = modValData.apply(self.utils.getRelatedArtists)
+        related.name = "RelatedArtists"
+
+        metaData = DataFrame([alsoKnownAs,members,memberOf,related]).T
         metaData["Type"] = metaData.apply(lambda x: "Group" if isinstance(x["Members"],dict) else "Artist", axis=1)
         
         return metaData      

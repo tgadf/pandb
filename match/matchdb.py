@@ -7,6 +7,7 @@ from listUtils import getFlatList
 from .matchlev import getLevenshtein
 from .dataio import MatchDBDataIO
 from .albumreq import AlbumReq
+from .results import MatchResults
 from .utils import write
 from .pool import poolMatchNames, poolMatchAlbums
 from pandas import DataFrame, Series, concat
@@ -57,6 +58,9 @@ class MatchDB:
             self.compareIOs[compareDB] = compareIO
         
         self.diagnostics = {}
+        self.mres = MatchResults(self.baseIO)
+        self.save = self.mres.save
+        self.results = {}
         
         pbar = ProgressBar()
         pbar.register()
@@ -72,10 +76,15 @@ class MatchDB:
         baseIO = self.baseIO
         baseIO.loadNames()
         baseIO.setAvailableNames(self.albumReqs[baseIO.db])
+        self.results[baseIO.db] = {}
         #baseMediaMatchData = baseIO.getData(albums=)
         
         results = {}
-        for compareDB,compareIO in self.compareIOs.items():
+        for compareDB in self.compareIOs.keys():
+            compareIO = self.compareIOs[compareDB]
+            baseIO.setCrossCheck(False)
+            compareIO.setCrossCheck(False)
+            
             print("")
             print("-"*150)
             print("{0} {1} {2}".format("-"*70, compareDB, "-"*(150-70-2-len(compareDB))))
@@ -88,93 +97,27 @@ class MatchDB:
             ## 1) Match Artist Names
             ########################################################################################################################################
             if verbose: ts = Timestat("String Matching {0} [{1}] x {2} [{3}] Artist Names".format(baseIO.getNumNames(), baseIO.db, compareIO.getNumNames(), compareIO.db), ind=2)
-            if self.usePool:
-                artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=self.nPart, progress=True)
-                #artistMatchResults = poolMatchNames(baseNames=baseMediaMatchData["Name"], compNames=compareMediaMatchData["Name"], nCores=self.nPart, progress=True)
-            elif self.useDask:
-                daskDF = dd.from_pandas(baseIO.getAvailableNames(), npartitions=self.nPart)
-                artistMatchResults = daskDF.map_partitions(lambda df: df.apply(lambda artistName: compareIO.getAvailableNames().apply(getLevenshtein, x2=artistName))).compute(scheduler='processes')
+            artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=self.nPart, progress=True)
+            if verbose: ts.stop()
+                
             artistNameMatches  = self.selectArtistsForMediaMatch(artistMatchResults, self.matchReqs['Artist'])
             mediaData          = self.prepareMediaData(artistNameMatches, baseIO, compareIO)
             del artistMatchResults
             del artistNameMatches
-            if verbose: ts.stop()
             
             
             ########################################################################################################################################
             ## 2) Match Artist Albums Names
             ########################################################################################################################################
             if verbose: ts = Timestat("String Matching {0} [{1}] Album Names".format(mediaData.shape[0], baseIO.db), ind=2)
-            if self.usePool is True:
-                albumMatchResults = self.matchMediaDataPool(mediaData)
-            elif self.useDask is True:
-                albumMatchResults = self.matchMediaData(mediaData)
-            matchResults      = self.selectMatches(albumMatchResults)
+            albumMatchResults = self.matchMediaDataPool(mediaData)
+            self.mres.addResult(compareDB, compareIO, albumMatchResults)
             del albumMatchResults
             del mediaData
             if verbose: ts.stop()
                 
-
-            ########################################################################################################################################
-            ## 3) Cross Match Data
-            ########################################################################################################################################
-            compareCrossMatchIDs = getFlatList(matchResults["Single"].apply(lambda x: x.index).values)
-            if len(compareCrossMatchIDs) == 0:
-                self.write(2, "Did not find any potential matches. Stopping process")
-                tsMatch.update()
-                continue
-            print(compareCrossMatchIDs)
-            
-            compareIO.setAvailableNames(compareCrossMatchIDs) ## This will be the 'base'
-            baseIO.setAvailableNames(AlbumReq(min=2))
-            
-            
-            #return
-            #baseMediaCrossMatchData    = compareIO.getData(ids=compareCrossMatchIDs)
-            #compareMediaCrossMatchData = baseIO.getData(albums=AlbumReq(min=2))
-            
+            self.compareIOs[compareDB] = None
         
-            ########################################################################################################################################
-            ## 4) Cross Match Artist Names
-            ########################################################################################################################################
-            if verbose: ts = Timestat("String Matching {0} [{1}] x {2} [{3}] Artist Names".format(compareIO.getNumNames(), compareIO.db, baseIO.getNumNames(), baseIO.db), ind=2)
-            artistMatchResults = poolMatchNames(baseNames=compareIO.getAvailableNames(), compNames=baseIO.getAvailableNames(), nCores=self.nPart, progress=True)
-            artistNameMatches  = self.selectArtistsForMediaMatch(artistMatchResults, self.matchReqs["Artist"])
-            mediaData          = self.prepareMediaData(artistNameMatches, compareIO, baseIO)
-            del artistMatchResults
-            del artistNameMatches
-            if verbose: ts.stop()
-            return
-            
-            
-            ########################################################################################################################################
-            ## 5) Cross Match Artist Albums Names
-            ########################################################################################################################################
-            if verbose: ts = Timestat("String Matching {0} [{1}] Album Names".format(mediaData.shape[0], compareIO.db), ind=2)
-            if self.usePool is True:
-                albumCrossMatchResults = self.matchMediaDataPool(mediaData)
-            elif self.useDask is True:
-                albumCrossMatchResults = self.matchMediaData(mediaData)
-            crossMatchResults      = self.selectMatches(albumCrossMatchResults)
-            del mediaData
-            del albumCrossMatchResults
-            if verbose: ts.stop()
-            
-            
-            ########################################################################################################################################
-            ## 6) Get Final Matches
-            ########################################################################################################################################
-            baseCrossMatchIDs = crossMatchResults["Single"].apply(lambda matchResult: list(matchResult.index)[0])
-            crossMatchDF = DataFrame(matchResults["Single"].apply(lambda matchResult: list(matchResult.index)[0]), columns=["CompareID"])
-            crossMatchDF["BaseIDMap"] = crossMatchDF["CompareID"].map(baseCrossMatchIDs)
-            correctMatches = crossMatchDF[crossMatchDF.index == crossMatchDF["BaseIDMap"]]
-            results[compareDB] = correctMatches
-            del baseCrossMatchIDs
-            del crossMatchDF
-            
-            tsMatch.update()
-        
-        self.results = results
         tsMatch.stop()
         
         
@@ -274,45 +217,7 @@ class MatchDB:
             mediaData[key] = {"Base": Series(baseMediaData[baseid]), "Compare": Series(compareMediaData[compid])}
         mediaData = Series(mediaData)
         return mediaData
-            
-        
-        try:
-            baseMediaValues = baseMediaMatchData.loc[artistNameMatches.index]
-        except:
-            print("artistNameMatches:")
-            print(artistNameMatches.head())
-            print(artistNameMatches.index)
-            print("baseMediaMatchData:")
-            print(baseMediaMatchData.head())
-            raise ValueError("Error subselecting artists for media gathering")
-
-            
-        try:
-            baseMediaValues = baseMediaValues.apply(lambda row: getMatchMediaData(row), axis=1)
-        except:
-            print("self.mediaTypes:")
-            print(self.mediaTypes)
-            print("baseMediaValues:")
-            print(baseMediaValues.head())
-            raise ValueError("Error calling baseMediaValues = baseMediaValues.apply(lambda row: getMatchMediaData(row), axis=1)")
-        #print("")
-        #print(type(baseMediaValues))
-        #print(baseMediaValues.head())
-        compareMediaValues = artistNameMatches.apply(lambda compareIDMatches: {compareID: getMatchMediaData(compareMediaMatchData.loc[compareID]) for compareID in compareIDMatches.keys()})
-        #print("")
-        #print(type(compareMediaValues))
-        #print(compareMediaValues.head())
-
-        try:
-            baseMediaValues.name = "BaseMedia"
-            compareMediaValues.name = "CompareMedia"
-            retval = DataFrame(baseMediaValues).join(compareMediaValues)
-            #retval = concat([baseMediaValues,compareMediaValues], axis=1)
-            #retval.columns = ["BaseMedia", "CompareMedia"]    
-        except:
-            self.diagnostics["ConcatError"] = {"Base": baseMediaValues, "Compare": compareMediaValues}
-            raise ValueError("Something went really wrong when running retval = concat([baseMediaValues,compareMediaValues], axis=1) in prepareMediaData(). See diagnotic for data")
-        return retval
+    
     
     def selectMatches(self, albumMatchResults: Series) -> 'dict':
         rankResults = albumMatchResults.apply(lambda x: DataFrame({compareID: compareIDResult["Rank"].min(axis=1) for compareID,compareIDResult in x.items()}).T)

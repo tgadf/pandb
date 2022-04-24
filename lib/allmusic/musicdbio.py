@@ -27,9 +27,9 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))    
         
-        self.dir.addDir("RawArtistModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
-        self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
-        self.dir.getMusicDBDir("ModValArtist").mkDir()
+        self.dir.addDir("RawDiscModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
+        self.dir.addDir("ModValDisc", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="disc"))
+        self.dir.getMusicDBDir("ModValDisc").mkDir()
         
         self.dir.addDir("RawSongModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child="song"))
         self.dir.addDir("ModValSong", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="song"))
@@ -49,12 +49,13 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="allmusicArtistsData"))
         
-        self.data.addData("RawArtist", MusicDBData(path=self.dir.getMusicDBDir("RawArtistModVal"), arg=True), fname=True)
-        self.data.addData("RawArtistSong", MusicDBData(path=self.dir.getMusicDBDir("RawSongModVal"), arg=True), fname=True)
-        self.data.addData("RawArtistCredit", MusicDBData(path=self.dir.getMusicDBDir("RawCreditModVal"), arg=True), fname=True)
-        self.data.addData("RawArtistComposition", MusicDBData(path=self.dir.getMusicDBDir("RawCompositionModVal"), arg=True), fname=True)
+        self.data.addData("Raw", MusicDBData(path=self.dir.getMusicDBDir("RawModVal"), arg=True), fname=True)
+        self.data.addData("RawDisc", MusicDBData(path=self.dir.getMusicDBDir("RawDiscModVal"), arg=True), fname=True)
+        self.data.addData("RawSong", MusicDBData(path=self.dir.getMusicDBDir("RawSongModVal"), arg=True), fname=True)
+        self.data.addData("RawCredit", MusicDBData(path=self.dir.getMusicDBDir("RawCreditModVal"), arg=True), fname=True)
+        self.data.addData("RawComposition", MusicDBData(path=self.dir.getMusicDBDir("RawCompositionModVal"), arg=True), fname=True)
                         
-        self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)
+        self.data.addData("ModValDisc", MusicDBData(path=self.dir.getMusicDBDir("ModValDisc"), arg=True, suffix="DB"), fname=True)
         self.data.addData("ModValSong", MusicDBData(path=self.dir.getMusicDBDir("ModValSong"), arg=True, suffix="DB"), fname=True)
         self.data.addData("ModValCredit", MusicDBData(path=self.dir.getMusicDBDir("ModValCredit"), arg=True, suffix="DB"), fname=True)
         self.data.addData("ModValComposition", MusicDBData(path=self.dir.getMusicDBDir("ModValComposition"), arg=True, suffix="DB"), fname=True)

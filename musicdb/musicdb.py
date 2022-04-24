@@ -246,24 +246,24 @@ class PanDBIO:
     def getRows(self, idx):
         return self.mmeDF.loc[idx]
     
-    def setdbid(self, idx, db, dbID):
+    def setdbid(self, idx, db, dbID, verbose=True):
         if dbID is None:
             self.mmeDF.loc[idx, db] = None
-            print("  ==> Set [{0}/{1}] to [None]".format(idx,db))
+            if verbose: print("  ==> Set [{0}/{1}] to [None]".format(idx,db))
             return
         
         if db == "Spotify":
             self.mmeDF.loc[idx, db] = str(dbID)
-            print("  ==> Set [{0}/{1}] to [{2}]".format(idx,db,dbID))
+            if verbose: print("  ==> Set [{0}/{1}] to [{2}]".format(idx,db,dbID))
             return
                 
         try:
             int(dbID)
         except:
-            print("Could not set {0}/{1} ==> {2}".format(idx,db,dbID))
+            if verbose: print("Could not set {0}/{1} ==> {2}".format(idx,db,dbID))
             return
         self.mmeDF.loc[idx, db] = str(dbID)
-        print("  ==> Set [{0}/{1}] to [{2}]".format(idx,db,dbID))
+        if verbose: print("  ==> Set [{0}/{1}] to [{2}]".format(idx,db,dbID))
     
     def setrymid(self, idx, dbID):
         if dbID is None:

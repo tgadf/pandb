@@ -1,17 +1,20 @@
 """ Master Match Categories """
 
-__all__ = ["MatchID"]
+__all__ = ["PanDBMatch"]
 
 from musicdb import PanDBIO
+from master import MusicDBPermDir
+from ioutils import FileIO
+from gate import IOStore
 from pandas import DataFrame, Series, notna, isna, concat
 from uuid import uuid4
 from .matchdb import MatchDB
 
-class MatchID:
-    def __init__(self, baseDB: str, mdb: MatchDB, **kwargs):
+class PanDBMatch:
+    def __init__(self, baseDB: str, **kwargs):
         self.verbose = kwargs.get('verbose', True)
         if self.verbose: print("MatchID()")
-        
+
         ###################################################################################################################
         # Access To Pan DB
         ###################################################################################################################        
@@ -19,136 +22,185 @@ class MatchID:
         self.pdbio.setData()
             
         self.baseDB  = baseDB
-        self.mdb     = mdb
-        self.dbMatchResult = None
+        self.qmap = {'Near': 2, 'Loose': 1, 'Pure': 5, 'Good': 3, 'Great': 4}
+        self.maxQual = max(self.qmap.values())+1
         self.compareDBs    = []
+        self.load()
         
-        
-    def join(self):
-        dbMatches = []
-        self.compareDBs = []
 
-        for compareDB,compareDBResult in self.mdb.results.items():
-            compareDBIDs = compareDBResult["CompareID"]
-            compareDBIDs.name = compareDB
-            self.compareDBs.append(compareDB)
-            dbMatches.append(compareDBIDs)
+    def load(self):
+        io = FileIO()
+        mdbpd = MusicDBPermDir()
+        primaryMatchResults = io.get(mdbpd.getMatchPermPath().join("primaryMatch.p"))
+        self.primaryMatchNames   = io.get(mdbpd.getMatchPermPath().join("primaryMatchNames.p"))
+        crossMatchResults   = io.get(mdbpd.getMatchPermPath().join("crossMatch.p"))
+        self.crossMatchNames     = io.get(mdbpd.getMatchPermPath().join("crossMatchNames.p"))        
 
-        if len(dbMatches) > 0:
-            dbMatchResult = DataFrame(dbMatches[0])
-            for dbMatch in dbMatches[1:]:
-                dbMatchResult = dbMatchResult.join(dbMatch, how='outer')
-            self.dbMatchResult = dbMatchResult
-            
-            if self.verbose: print("  ==> Found {0} x {1} Matched Entries/DBs".format(self.dbMatchResult.shape[0], self.dbMatchResult.shape[1]))
-        else:
-            if self.verbose: print("  ==> No matches found...")
-                
+        ################################################################################################################################################
+        # Primary Match Results
+        ################################################################################################################################################
+        primaryMatchResults["CompareName"] = primaryMatchResults["Match"].apply(lambda x: x["Info"]["Name"])
+        primaryMatchResults["QValue"] = primaryMatchResults["Quality"].map(self.qmap)
+        primaryMatchResults = primaryMatchResults.join(primaryMatchResults["Match"].apply(lambda x: x["Rank"])).drop(["Match"], axis=1)
+        primaryMatchResults = primaryMatchResults.rename(columns={"DB": "CompareDB"})
 
-    def getIdx(self, row):
-        indices = []
-        for idx,val in row.iteritems():
-            if isinstance(val,str):
-                indices.append(val)
-        idx = list(set(indices))    
+        primaryResults = Series({(baseid,comparedb): df.drop(["BaseID", "CompareDB"], axis=1) for (baseid,comparedb),df in primaryMatchResults.groupby(["BaseID","CompareDB"])})
+        primaryMatches = primaryResults.apply(lambda df: df[df["QValue"] == df["QValue"].max()])
 
-        if len(idx) == 1:
-            retval = idx[0] if isinstance(idx[0],str) else None
-            return retval
-        elif len(idx) == 0:
-            return None
-        else:
-            vals = [val for val in idx if notna(val)]
-            retval = vals[0] if len(vals) == 1 else vals
-            return retval
+
+        
+        ################################################################################################################################################
+        # Cross Match Results
+        ################################################################################################################################################
+        crossMatchResults = crossMatchResults.rename(columns={"CompareID": "BaseIDCrossMatch"})
+        crossMatchResults["QValue"] = crossMatchResults["Quality"].map(self.qmap)
+        crossMatchResults = crossMatchResults.join(crossMatchResults["BaseID"].apply(Series)).drop(["BaseID"], axis=1)
+        crossMatchResults = crossMatchResults.rename(columns={0: "BaseID", 1: "CompareDB", 2: "CompareID"})
+
+        crossResults = Series({(compareid,comparedb): df.drop(["CompareID", "CompareDB"], axis=1) for (compareid,comparedb),df in crossMatchResults.groupby(["CompareID","CompareDB"])})
+        crossMatches = crossResults.apply(lambda df: df[df["QValue"] == df["QValue"].max()])        
         
         
-    def getMasterID(self):
-        if not isinstance(self.dbMatchResult, DataFrame):
-            print("  ==> No matched results. Not matching to master DB")
-            return
+
+        ################################################################################################################################################
+        # Segment By Num Matches
+        ################################################################################################################################################
+        numMatches = crossMatches.apply(lambda x: x.shape[0])
+        matchGroup = {nM: crossMatches[numMatches == nM] for nM in numMatches.value_counts().index}
         
+
+        
+        ################################################################################################################################################
+        # Single Matches w/ and w/o Multi Cross Matches
+        ################################################################################################################################################
+        singleResults = {}
+        for (compareid,comparedb),df in matchGroup[1].iteritems():
+            for _,row in df.iterrows():
+                baseid = row["BaseID"]
+                if baseid == row["BaseIDCrossMatch"]:
+                    key = (baseid,comparedb)
+                    if singleResults.get(key) is None:
+                        singleResults[key] = {}
+                    singleResults[key][compareid] = {"Quality": row["QValue"], "Rank": row["Match"]["Rank"], "Name": row["Match"]["Info"]["Name"]}
+
+
+        singleFinalResults = {"Single": {}, "Multi": {}}
+        for key,value in singleResults.items():
+            maxValues = value
+            if len(maxValues) > 1:
+                valueMatches = Series(maxValues).apply(Series)
+                maxValues = valueMatches[valueMatches["Quality"] == valueMatches["Quality"].max()].T.to_dict()
+            if len(maxValues) > 1:
+                singleFinalResults["Multi"][key] = value
+            else:
+                baseid,comparedb = key
+                singleFinalResults["Single"].update({(baseid,comparedb,compareid): result for compareid,result in maxValues.items()})
+        self.singleFinalResults = {"Single": Series(singleFinalResults["Single"]), "Multi": Series(singleFinalResults["Multi"]) }
+        
+
+        
+        ################################################################################################################################################
+        # Multi Matches
+        ################################################################################################################################################       
+        multiResults = {}
+        for nM,mGroup in matchGroup.items():
+            if nM == 1:
+                continue
+            for (compareid,comparedb),df in mGroup.iteritems():
+                for _,row in df.iterrows():
+                    baseid = row["BaseID"]
+                    baseidcm = row["BaseIDCrossMatch"]
+                    key = (baseid,comparedb,compareid,baseidcm)
+                    if singleFinalResults["Single"].get(baseid) is not None:
+                        multiResults[key] = {"Quality": row["QValue"], "Rank": row["Match"]["Rank"], "Name": row["Match"]["Info"]["Name"]}
+        self.multiResults = Series(multiResults)        
+        
+        
+    def select(self, minQual=3, maxQual=None, show=True):
+        maxQual = maxQual if isinstance(maxQual, int) else self.maxQual
+        
+        matches = {}
+        for baseid,baseresult in self.singleFinalResults["Single"].groupby(level=0):
+            name = self.crossMatchNames[(self.baseDB, baseid)]
+            first = True
+            for (comparedb,compareid),compresult in baseresult.groupby(level=[1,2]):
+                for key,result in compresult.iteritems():
+                    qual  = result["Quality"]
+                    if qual < minQual or qual >= maxQual:
+                        continue
+                    cname = self.crossMatchNames[(baseid,comparedb,compareid)]
+                    idval = baseid if first is True else " "
+                    first = False
+                    if show: print(f"{idval: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50}")
+                    matches[key] = qual
+                    for key,value in self.multiResults.get(baseid, {}).items():
+                        qual  = value["Quality"]
+                        if qual < minQual or qual >= maxQual:
+                            continue
+                        cname = self.crossMatchNames[(baseid,comparedb,compareid)]
+                        if show: print(f"{' ': <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50}")
+
+        self.uniqueIDs = Series(matches).index.unique(level=0)
+        self.uniqueDBs = Series(matches).index.unique(level=1)                            
+        print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
+        self.matches = Series(matches)
+        
+
+    def master(self):
         if self.verbose: print("  ==> Getting Master ID Lookup")
-        lookup = {compareDB: self.pdbio.getIndexLookup(compareDB) for compareDB in self.compareDBs}
+        lookup = {compareDB: self.pdbio.getIndexLookup(compareDB) for compareDB in self.uniqueDBs}
+        ios    = IOStore()
+        mdbio  = ios.get(self.baseDB)
+        names  = mdbio.data.getSummaryNameData()        
         
-        if self.verbose: print("  ==> Mapping Master ID Lookup From Matchd DB IDs")
-        compareLookup = DataFrame({compareDB: compareDBID.map(lookup[compareDB]) for compareDB,compareDBID in self.dbMatchResult.iteritems()})
+        masterResultIndex = {}
+        masterResultData  = {}
+        for baseid,baseresult in self.matches.groupby(level=0):
+            masterResultIndex[baseid] = {"ArtistName": names[baseid]}
+            masterResultData[baseid] = {"ArtistName": names[baseid]}
+            for (comparedb,compareid),compresult in baseresult.groupby(level=[1,2]):
+                for key,result in compresult.iteritems():
+                    masterResultIndex[baseid][comparedb] = lookup[comparedb].get(compareid)
+                    masterResultData[baseid][comparedb]  = compareid
+        masterResultIndex = Series(masterResultIndex).apply(Series)
+        masterResultData  = Series(masterResultData).apply(Series).T
+        self.masterResultData = masterResultData
         
-        self.masterIDXLookup = compareLookup.apply(self.getIdx, axis=1)
-        self.masterIDXLookup.name = "MasterID"
+        uniqueMasterIndex = masterResultIndex[self.uniqueDBs].apply(lambda row: Series([idx for idx in row.values if isinstance(idx,str)]).unique(), axis=1)
+        self.knownMasterIndex  = uniqueMasterIndex[uniqueMasterIndex.apply(len) == 1].apply(lambda idx: idx[0])
+        self.multiMasterIndex  = uniqueMasterIndex[uniqueMasterIndex.apply(len) > 1]
+        self.newMasterIndex    = uniqueMasterIndex[uniqueMasterIndex.apply(len) == 0]      
         
-        
-    def joinMaster(self):
-        if not isinstance(self.dbMatchResult, DataFrame):
-            print("  ==> No matched results. Not matching to master DB")
-            return
-        if not isinstance(self.masterIDXLookup, Series):
-            print("  ==> No masterID lookup results. Not matching to master DB")
-            return
-        
-        self.matchedResults = self.dbMatchResult.join(self.masterIDXLookup).join(self.mdb.baseIO.mdbio.data.getSummaryNameData())
-        self.matchedResults.index.name = self.baseDB
-        self.matchedResults = self.matchedResults.reset_index()
-        
-
-        #################################################################################
-        ## Group Matches
-        #################################################################################
-        isKnown  = self.matchedResults["MasterID"].notna()
-        numMatch = self.matchedResults.drop(["MasterID", "Name"], axis=1).count(axis=1)
-        
-        toMerge  = {}
-        toMerge["KnownMatch"] = self.matchedResults[isKnown].copy(deep=True)
-        toMerge["GoodMatch"]  = self.matchedResults[(~isKnown) & (numMatch>=3)].copy(deep=True)
-        toMerge["LooseMatch"] = self.matchedResults[(~isKnown) & (numMatch==2)].copy(deep=True)
-        if "Deezer" in toMerge["LooseMatch"].columns and "LastFM" in toMerge["LooseMatch"].columns:
-            toMerge["OkMatch"] = toMerge["LooseMatch"][(self.matchedResults["LastFM"].isna()) & (self.matchedResults["Deezer"].isna())]
-        elif "Deezer" in toMerge["LooseMatch"].columns:
-            toMerge["OkMatch"] = toMerge["LooseMatch"][(self.matchedResults["Deezer"].isna())]
-        elif "LastFM" in toMerge["LooseMatch"].columns:
-            toMerge["OkMatch"] = toMerge["LooseMatch"][(self.matchedResults["LastFM"].isna())]
-        else:
-            toMerge["OkMatch"] = toMerge["LooseMatch"]
-            
-        if self.verbose: print("  ==> Merging {0}/{1} Entries With PanDB".format(toMerge["KnownMatch"].shape[0], self.matchedResults.shape[0]))        
-        if self.verbose: print("  ==> Adding {0}/{1} New Good Entries To PanDB".format(toMerge["GoodMatch"].shape[0], self.matchedResults.shape[0]))
-        if self.verbose: print("  ==> Adding {0}/{1} New OK Entries To PanDB".format(toMerge["OkMatch"].shape[0], self.matchedResults.shape[0]))
-        if self.verbose: print("  ==> Adding {0}/{1} New Loose Entries To PanDB (Maybe)".format(toMerge["LooseMatch"].shape[0], self.matchedResults.shape[0]))
-        self.toMerge = toMerge
+        print("  ==> Found [{0}] Known Matches".format(len(self.knownMasterIndex)))
+        print("  ==> Found [{0}] Multi Matches".format(len(self.multiMasterIndex)))
+        print("  ==> Found [{0}] New Matches".format(len(self.newMasterIndex)))
         
         
-    def mergeMaster(self):
-        if not isinstance(self.toMerge, dict):
-            print("  ==> No matched results. Not matching to master DB")
-            return
-        
-        
+    def merge(self):
         ###################################################################################################################
         # Existing Artists
         ###################################################################################################################        
-        for idx,row in self.toMerge["KnownMatch"].iterrows():
-            midx = row["MasterID"]
-            if notna(row[self.baseDB]):
-                self.pdbio.setdbid(midx, self.baseDB, str(row[self.baseDB]))
-            for compareDB,compareDBID in row[row.notna()].iteritems():
-                if compareDB in self.compareDBs:
-                    self.pdbio.setdbid(midx, compareDB, str(row[compareDB]))
-                    
-                    
+        for baseid,masterid in self.knownMasterIndex.iteritems():
+            masterData = self.masterResultData[baseid]
+            name = masterData["ArtistName"]
+            print(baseid,'\t',name)
+            dbids = {db: dbid for db,dbid in masterData.iteritems() if notna(dbid)}
+            dbids[self.baseDB] = baseid
+            for db,dbid in dbids.items():
+                self.pdbio.setdbid(masterid, db, str(dbid), verbose=False)
+                
+                
         ###################################################################################################################
-        # New Artists With 3+ Matches
-        ###################################################################################################################
+        # New Artists
+        ###################################################################################################################        
         mmeDF = self.pdbio.getData()
-        newArtists = self.toMerge["GoodMatch"].drop(["MasterID"], axis=1).rename(columns={"Name": "ArtistName"})
+        newArtists = self.masterResultData[self.newMasterIndex.index].T
+        for baseid,name in newArtists["ArtistName"].iteritems():
+            print(baseid,'\t',name)        
+        newArtists.index.name = self.baseDB
+        newArtists = newArtists.reset_index()
         newArtists.index = [str(uuid4()) for i in newArtists.index]
+        
         mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
-            
-            
-        ###################################################################################################################
-        # New Artists With 2+ Matches
-        ###################################################################################################################
-        newArtists = self.toMerge["OkMatch"].drop(["MasterID"], axis=1).rename(columns={"Name": "ArtistName"})
-        newArtists.index = [str(uuid4()) for i in newArtists.index]
-        mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
-                        
+        
         self.pdbio.saveData(mmeDF)
