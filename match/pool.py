@@ -44,7 +44,9 @@ def poolMatchNames(baseNames: Series, compNames: Series, **kwargs):
     pFunc  = partial(poolMatchNamesRunner, **kwargs)
     if verbose: ts = Timestat("Matching {0} x {1} Names".format(len(baseNames),len(compNames)))
     retval = concat(pool.map(func=pFunc, iterable=baseNamesSplit))
+    if verbose: ts.update()
     pool.close()
+    if verbose: ts.update()
     pool.join()
     if verbose: ts.stop()
     return retval

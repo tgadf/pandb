@@ -8,7 +8,8 @@ from ioutils import FileIO
 from gate import IOStore
 from pandas import DataFrame, Series, notna, isna, concat
 from uuid import uuid4
-from .matchdb import MatchDB
+from hashlib import md5
+from match.matchdb import MatchDB
 
 class PanDBMatch:
     def __init__(self, baseDB: str, **kwargs):
@@ -22,10 +23,15 @@ class PanDBMatch:
         self.pdbio.setData()
             
         self.baseDB  = baseDB
-        self.qmap = {'Near': 2, 'Loose': 1, 'Pure': 5, 'Good': 3, 'Great': 4}
+        self.qmap = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
         self.maxQual = max(self.qmap.values())+1
         self.compareDBs    = []
+        self.hashmap = {}
         self.load()
+        
+        
+    def getHashmap(self):
+        return self.hashmap
         
 
     def load(self):
@@ -113,10 +119,18 @@ class PanDBMatch:
                     key = (baseid,comparedb,compareid,baseidcm)
                     if singleFinalResults["Single"].get(baseid) is not None:
                         multiResults[key] = {"Quality": row["QValue"], "Rank": row["Match"]["Rank"], "Name": row["Match"]["Info"]["Name"]}
-        self.multiResults = Series(multiResults)        
+        self.multiResults = Series(multiResults)       
+        
         
         
     def select(self, minQual=3, maxQual=None, show=True):
+        def getHash(baseid, comparedb, compareid):
+            m = md5()
+            m.update(baseid.encode())
+            m.update(comparedb.encode())
+            m.update(compareid.encode())
+            return m.hexdigest()[:10]
+        
         maxQual = maxQual if isinstance(maxQual, int) else self.maxQual
         
         matches = {}
@@ -131,22 +145,56 @@ class PanDBMatch:
                     cname = self.crossMatchNames[(baseid,comparedb,compareid)]
                     idval = baseid if first is True else " "
                     first = False
-                    if show: print(f"{idval: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50}")
+                    hval  = getHash(baseid, comparedb, compareid)
+                    assert self.hashmap.get(hval) is None, "OMG! Found a duplicate hash"
+                    self.hashmap[hval] = (baseid,comparedb,compareid,key,qual,name,cname)
+                    if show: print(f"{hval: <12} | {idval: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50} | {hval}")
                     matches[key] = qual
                     for key,value in self.multiResults.get(baseid, {}).items():
                         qual  = value["Quality"]
                         if qual < minQual or qual >= maxQual:
                             continue
                         cname = self.crossMatchNames[(baseid,comparedb,compareid)]
-                        if show: print(f"{' ': <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50}")
+                        hval  = getHash(baseid, comparedb, compareid)
+                        assert self.hashmap.get(hval) is None, "OMG! Found a duplicate hash"
+                        self.hashmap[hval] = (baseid,comparedb,compareid,key,qual,name,cname)
+                        if show: print(f"{hval: <12} | {' ': <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50} | {hval}")
 
-        self.uniqueIDs = Series(matches).index.unique(level=0)
-        self.uniqueDBs = Series(matches).index.unique(level=1)                            
-        print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
-        self.matches = Series(matches)
+        if len(matches) > 0:
+            self.uniqueIDs = Series(matches).index.unique(level=0)
+            self.uniqueDBs = Series(matches).index.unique(level=1)                            
+            print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
+            self.matches = Series(matches)
+        else:
+            self.uniqueIDs = []
+            self.uniqueDBs = []
+            print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
+            self.matches = None
+            
+        
+    def include(self, vals: str, show: bool = True):
+        hvals = [x.strip() for x in vals.split("\n") if len(x) > 0]
+        matches = {}
+        for hval in hvals:
+            baseid,comparedb,compareid,key,qual,name,cname = self.hashmap[hval]
+            if show: print(f"{hval: <12} | {baseid: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50} | {hval}")
+            matches[key] = qual
+
+        if len(matches) > 0:
+            self.uniqueIDs = Series(matches).index.unique(level=0)
+            self.uniqueDBs = Series(matches).index.unique(level=1)                            
+            print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
+            self.matches = Series(matches)
+        else:
+            self.uniqueIDs = []
+            self.uniqueDBs = []
+            print("  ==> Found [{0}] Matches For [{1}] [{2}] IDs From [{3}] DBs".format(len(matches), len(self.uniqueIDs), self.baseDB, len(self.uniqueDBs)))
+            self.matches = None
         
 
     def master(self):
+        if self.matches is None:
+            return
         if self.verbose: print("  ==> Getting Master ID Lookup")
         lookup = {compareDB: self.pdbio.getIndexLookup(compareDB) for compareDB in self.uniqueDBs}
         ios    = IOStore()
@@ -177,6 +225,10 @@ class PanDBMatch:
         
         
     def merge(self):
+        if self.matches is None:
+            print("No matches so no need to join with master...")
+            return
+        
         ###################################################################################################################
         # Existing Artists
         ###################################################################################################################        
@@ -203,4 +255,18 @@ class PanDBMatch:
         
         mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
         
+        print("  ==> Added [{0}] Known Matches".format(len(self.knownMasterIndex)))
+        print("  ==> Added [{0}] New Matches".format(len(self.newMasterIndex)))
         self.pdbio.saveData(mmeDF)
+                
+                
+        ###################################################################################################################
+        # Save Multi Master Data
+        ###################################################################################################################        
+        io = FileIO()
+        mdbpd = MusicDBPermDir()
+        multiMasterIndexData = {baseid: {"Data": self.masterResultData[baseid], "Rows": self.pdbio.getRows(masteridxs)} for baseid,masteridxs in self.multiMasterIndex.iteritems()}
+        savename = mdbpd.getMatchPermPath().join("multiMatch.p")
+        print("  ==> Saving [{0}] Multi Match Artists' Data To {1}".format(len(multiMasterIndexData), savename.str))
+        io.save(idata = multiMasterIndexData, ifile = savename)
+        del self.pdbio

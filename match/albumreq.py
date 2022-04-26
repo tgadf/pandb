@@ -9,18 +9,25 @@ class AlbumReq:
         self.minAlbums = kwargs.get("min")
         self.maxAlbums = kwargs.get("max")
         self.topAlbums = kwargs.get("top")
+        self.rndAlbums = kwargs.get("rnd")
         
-        assert(any([isinstance(x,int) for x in [self.minAlbums,self.maxAlbums,self.topAlbums]])), "Need to specify album quantity"
+        assert(any([isinstance(x,int) for x in [self.minAlbums,self.maxAlbums,self.topAlbums,self.rndAlbums]])), "Need to specify album quantity"
         
 
     def valid(self, numAlbums: Series) -> 'Series':
+        cuts      = {}
         albums    = numAlbums.sort_values(ascending=False)
         maxAlbums = self.maxAlbums if isinstance(self.maxAlbums,int) else numAlbums.max()+1
         minAlbums = self.minAlbums if isinstance(self.minAlbums,int) else numAlbums.min()
 
         idx = (albums < maxAlbums) & (albums >= minAlbums)
-        
-        retval = albums[idx].head(self.topAlbums).index if isinstance(self.topAlbums,int) else albums[idx].index            
+
+        retval = albums[idx].index
+        if isinstance(self.rndAlbums, int):
+            n = min([self.rndAlbums, albums[idx].shape[0]])
+            retval = albums[idx].sample(n=n).index
+        elif isinstance(self.topAlbums, int):
+            retval = albums[idx].head(self.topAlbums).index
         return retval
     
         

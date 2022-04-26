@@ -8,7 +8,7 @@ from gate import IOStore, IDStore
 from fileutils import DirInfo,FileInfo
 from timeutils import Timestat
 from ioutils import FileIO
-from pandas import to_numeric, DataFrame, Series, concat
+from pandas import to_numeric, DataFrame, Series, concat, isna
 from uuid import uuid4
 
 class PanDB:

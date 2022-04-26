@@ -98,10 +98,6 @@ class MatchDBDataIO:
         self.namesData = self.basicData.join(self.countsData)
         if self.verbose: write(4, "Found {0: >7} Available Artists In {1} DB", (self.namesData.shape[0], self.mdbio.db))
         
-        if self.isBase:
-            write(4, "{0: >7} Max Albums", self.namesData["NumMedia"].max())
-            write(4, "{0: >7} Min Albums", self.namesData["NumMedia"].min())
-        
             
         del self.basicData
         del self.countsData
@@ -127,8 +123,12 @@ class MatchDBDataIO:
         assert isinstance(self.namesData, DataFrame), "loadNames() must be called"
         if self.crossCheck is False:
             if isinstance(req, AlbumReq):
+                numMedia = self.namesData["NumMedia"]
+                write(4, "{0: >7} Available Artists With [{1}/{2}] Min/Max Albums", (numMedia.count(), numMedia.min(), numMedia.max()))
                 self.possibleIDs  = req.valid(self.namesData["NumMedia"])
                 self.possibleIDDF = DataFrame(index=self.possibleIDs)
+                numMedia = self.namesData.loc[self.possibleIDs]["NumMedia"]
+                write(4, "{0: >7} Possible Artists With [{1}/{2}] Min/Max Albums", (numMedia.count(), numMedia.min(), numMedia.max()))
         else:
             if isinstance(req, AlbumReq):
                 self.crossCheckIDs  = req.valid(self.namesData["NumMedia"])
@@ -136,6 +136,7 @@ class MatchDBDataIO:
             elif isinstance(req, (Index,list)):
                 self.crossCheckIDs  = req
                 self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
+        
         
         
     ############################################################################################################################################

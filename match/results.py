@@ -25,16 +25,33 @@ class MatchResults:
                 if rank["Medium"] == 0:
                     continue
                 quality = None
-                if rank["Tight"] >= 4:
-                    quality = "Pure"
-                elif rank["Tight"] >= 2 and rank["Medium"] >= 3:
-                    quality = "Great"
-                elif rank["Tight"] >= 1 and rank["Medium"] >= 2:
+                if rank["Exact"] == 0:
+                    if rank["Tight"] >= 2:
+                        quality = "Great"
+                    elif rank["Tight"] == 1:
+                        quality = "Loose"
+                        if rank["Medium"] == 1:
+                            quality = "Near"
+                        if rank["Medium"] >= 2:
+                            quality = "Good"
+                    elif rank["Tight"] == 0:
+                        quality = "Poor"
+                        if rank["Medium"] >= 2:
+                            quality = "Low"
+                        if rank["Medium"] >= 3:
+                            quality = "Loose"
+                        if rank["Medium"] >= 4:
+                            quality = "Near"
+                elif rank["Exact"] == 1:
                     quality = "Good"
-                elif rank["Tight"] >= 1:
-                    quality = "Near"
-                elif rank["Medium"] >= 1:
-                    quality = "Loose"
+                    if rank["Tight"] >= 2:
+                        quality = "Great"
+                    if rank["Medium"] == 1:
+                        quality = "Sole"
+                elif rank["Exact"] >= 2:
+                    quality = "Great"
+                    if rank["Tight"] >= 3 or rank["Medium"] >= 5:
+                        quality = "Pure"
                 else:
                     print(rank)
 
@@ -88,16 +105,33 @@ class CrossMatchResults:
                 if rank["Medium"] == 0:
                     continue
                 quality = None
-                if rank["Tight"] >= 4:
-                    quality = "Pure"
-                elif rank["Tight"] >= 2 and rank["Medium"] >= 3:
-                    quality = "Great"
-                elif rank["Tight"] >= 1 and rank["Medium"] >= 2:
+                if rank["Exact"] == 0:
+                    if rank["Tight"] >= 2:
+                        quality = "Great"
+                    elif rank["Tight"] == 1:
+                        quality = "Loose"
+                        if rank["Medium"] == 1:
+                            quality = "Near"
+                        if rank["Medium"] >= 2:
+                            quality = "Good"
+                    elif rank["Tight"] == 0:
+                        quality = "Poor"
+                        if rank["Medium"] >= 2:
+                            quality = "Low"
+                        if rank["Medium"] >= 3:
+                            quality = "Loose"
+                        if rank["Medium"] >= 4:
+                            quality = "Near"
+                elif rank["Exact"] == 1:
                     quality = "Good"
-                elif rank["Tight"] >= 1:
-                    quality = "Near"
-                elif rank["Medium"] >= 1:
-                    quality = "Loose"
+                    if rank["Tight"] >= 2:
+                        quality = "Great"
+                    if rank["Medium"] == 1:
+                        quality = "Sole"
+                elif rank["Exact"] >= 2:
+                    quality = "Great"
+                    if rank["Tight"] >= 3 or rank["Medium"] >= 5:
+                        quality = "Pure"
                 else:
                     print(rank)
 

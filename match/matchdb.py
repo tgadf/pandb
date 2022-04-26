@@ -74,30 +74,31 @@ class MatchDB:
         print("-"*150)
         print("{0} {1} {2}".format("-"*70, self.baseIO.db, "-"*(150-70-2-len(self.baseIO.db))))
         baseIO = self.baseIO
+        if verbose: ts = Timestat("Loading Artist Names", ind=2)
         baseIO.loadNames()
         baseIO.setAvailableNames(self.albumReqs[baseIO.db])
+        if verbose: ts.stop()
         self.results[baseIO.db] = {}
-        #baseMediaMatchData = baseIO.getData(albums=)
         
         results = {}
         for compareDB in self.compareIOs.keys():
             compareIO = self.compareIOs[compareDB]
-            baseIO.setCrossCheck(False)
-            compareIO.setCrossCheck(False)
             
             print("")
             print("-"*150)
             print("{0} {1} {2}".format("-"*70, compareDB, "-"*(150-70-2-len(compareDB))))
+            
+            if verbose: ts = Timestat("Loading Artist Names", ind=2)
             compareIO.loadNames()
             compareIO.setAvailableNames(self.albumReqs[compareIO.db])
-            #compareMediaMatchData = compareIO.getData(albums=self.albumReqs[compareIO.db])
-            self.diagnostics[compareDB] = {}
+            if verbose: ts.stop()
         
             ########################################################################################################################################
             ## 1) Match Artist Names
             ########################################################################################################################################
             if verbose: ts = Timestat("String Matching {0} [{1}] x {2} [{3}] Artist Names".format(baseIO.getNumNames(), baseIO.db, compareIO.getNumNames(), compareIO.db), ind=2)
-            artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=self.nPart, progress=True)
+            nCores = self.nPart if compareIO.getNumNames() < 200000 else 3
+            artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=nCores, progress=True)
             if verbose: ts.stop()
                 
             artistNameMatches  = self.selectArtistsForMediaMatch(artistMatchResults, self.matchReqs['Artist'])
@@ -122,7 +123,7 @@ class MatchDB:
         
         
     def matchMediaDataPool(self, mediaData: Series) -> 'Series':
-        albumMatchResults = poolMatchAlbums(mediaData, verbose=True)
+        albumMatchResults = poolMatchAlbums(mediaData, nCores=3, verbose=True)
         
         mediaResults = {}
         rankValues   = {"Loose": 0.7, "Medium": 0.8, "Tight": 0.9, "Exact": 0.95}
