@@ -58,13 +58,20 @@ class MatchDBCounts:
         except:
             print("Could not get SummaryCounts Data")
             summaryCountsData = None
-            
-        try:
-            summaryCountsData = summaryCountsData[mediaTypes].rename(columns={col: "Num{0}".format(col) for col in summaryCountsData.columns})
-            summaryCountsData["NumMedia"] = summaryCountsData.sum(axis=1)
-        except:
-            print("Could not manipulate SummaryCounts Data")
-            summaryCountsData = None
+
+        if isinstance(mediaTypes,list):
+            try:
+                summaryCountsData = summaryCountsData[mediaTypes].rename(columns={col: "Num{0}".format(col) for col in summaryCountsData.columns})
+                summaryCountsData["NumMedia"] = summaryCountsData.sum(axis=1)
+            except:
+                print("Could not manipulate SummaryCounts Data")
+                summaryCountsData = None
+        else:
+            try:
+                summaryCountsData["NumMedia"] = summaryCountsData.sum(axis=1)
+            except:
+                print("Could not manipulate SummaryCounts Data")
+                summaryCountsData = None
             
         
         ###################################

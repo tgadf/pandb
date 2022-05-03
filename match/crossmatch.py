@@ -6,7 +6,7 @@ from timeutils import Timestat
 from listUtils import getFlatList
 from .matchlev import getLevenshtein
 from .dataio import MatchDBDataIO
-from .albumreq import AlbumReq
+from .albumreq import MatchReq
 from .results import MatchResults, CrossMatchResults
 from .utils import write
 from .pool import poolMatchNames, poolMatchAlbums
@@ -36,9 +36,9 @@ class CrossMatchDB:
         assert isinstance(mediaTypes,list) or mediaTypes is None, "Media Req is not set."
         self.mediaTypes = mediaTypes
         
-        albumReqs = reqs.get("Albums")
-        assert isinstance(albumReqs,dict), "Albums Req is not set."
-        self.albumReqs = albumReqs
+        mreqs = reqs.get("Reqs")
+        assert isinstance(mreqs,dict), "Albums Req is not set."
+        self.mreqs = mreqs
         
         self.nPart = reqs.get("NPart", 2)
         assert isinstance(self.nPart,int), "NPart Req is not set."
@@ -50,7 +50,7 @@ class CrossMatchDB:
         assert isinstance(self.matchReqs.get('Tight'),int), "Artist match req is not set"
         
         self.compareIO = MatchDBDataIO(db=compareDB, mediaTypes=mediaTypes, mask=mask, verbose=False, base=False)
-        assert isinstance(self.albumReqs.get(self.compareIO.db),AlbumReq), "Reqs does not have BaseDB [{0}]".format(compareIO.db)
+        assert isinstance(self.mreqs.get(self.compareIO.db),MatchReq), "Reqs does not have BaseDB [{0}]".format(compareIO.db)
         
         self.mres = mres
         self.cmres = CrossMatchResults()
@@ -65,7 +65,7 @@ class CrossMatchDB:
         
         compareIO = self.compareIO        
         compareIO.loadNames()
-        compareIO.setAvailableNames(self.albumReqs[compareIO.db])
+        compareIO.setAvailableNames(self.mreqs[compareIO.db])
                 
         index = self.mres.apply(lambda row: (row["BaseID"],row["DB"],row["CompareID"]), axis=1)
         baseNames = self.mres['Match'].apply(lambda x: x["Info"]["Name"])

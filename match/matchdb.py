@@ -6,7 +6,7 @@ from timeutils import Timestat
 from listUtils import getFlatList
 from .matchlev import getLevenshtein
 from .dataio import MatchDBDataIO
-from .albumreq import AlbumReq
+from .albumreq import MatchReq
 from .results import MatchResults
 from .utils import write
 from .pool import poolMatchNames, poolMatchAlbums
@@ -35,9 +35,9 @@ class MatchDB:
         assert isinstance(mediaTypes,list) or mediaTypes is None, "Media Req is not set."
         self.mediaTypes = mediaTypes
         
-        albumReqs = reqs.get("Albums")
-        assert isinstance(albumReqs,dict), "Albums Req is not set."
-        self.albumReqs = albumReqs
+        mreqs = reqs.get("Reqs")
+        assert isinstance(mreqs,dict), "Match Reqs is not set."
+        self.mreqs = mreqs
         
         self.nPart = reqs.get("NPart", 2)
         assert isinstance(self.nPart,int), "NPart Req is not set."
@@ -49,12 +49,12 @@ class MatchDB:
         assert isinstance(self.matchReqs.get('Tight'),int), "Artist match req is not set"
         
         self.baseIO = MatchDBDataIO(db=baseDB, mediaTypes=mediaTypes, mask=mask, verbose=False, base=True)
-        assert isinstance(self.albumReqs.get(self.baseIO.db),AlbumReq), "Reqs does not have BaseDB [{0}]".format(baseIO.db)
+        assert isinstance(self.mreqs.get(self.baseIO.db),MatchReq), "Match Reqs does not have BaseDB [{0}]".format(self.baseIO.db)
         
         self.compareIOs = {}
         for compareDB in compareDBs:
             compareIO = MatchDBDataIO(db=compareDB, mediaTypes=mediaTypes, mask=mask, verbose=False, base=False)
-            assert isinstance(self.albumReqs.get(compareIO.db),AlbumReq), "Reqs does not have CompareDB [{0}]".format(compareIO.db)
+            assert isinstance(self.mreqs.get(compareIO.db),MatchReq), "Match Reqs does not have CompareDB [{0}]".format(compareIO.db)
             self.compareIOs[compareDB] = compareIO
         
         self.diagnostics = {}
@@ -76,7 +76,7 @@ class MatchDB:
         baseIO = self.baseIO
         if verbose: ts = Timestat("Loading Artist Names", ind=2)
         baseIO.loadNames()
-        baseIO.setAvailableNames(self.albumReqs[baseIO.db])
+        baseIO.setAvailableNames(self.mreqs[baseIO.db])
         if verbose: ts.stop()
         self.results[baseIO.db] = {}
         
@@ -90,7 +90,7 @@ class MatchDB:
             
             if verbose: ts = Timestat("Loading Artist Names", ind=2)
             compareIO.loadNames()
-            compareIO.setAvailableNames(self.albumReqs[compareIO.db])
+            compareIO.setAvailableNames(self.mreqs[compareIO.db])
             if verbose: ts.stop()
         
             ########################################################################################################################################
@@ -98,7 +98,7 @@ class MatchDB:
             ########################################################################################################################################
             if verbose: ts = Timestat("String Matching {0} [{1}] x {2} [{3}] Artist Names".format(baseIO.getNumNames(), baseIO.db, compareIO.getNumNames(), compareIO.db), ind=2)
             nCores = self.nPart if compareIO.getNumNames() < 200000 else 3
-            artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=nCores, progress=True)
+            artistMatchResults = poolMatchNames(baseNames=baseIO.getAvailableNames(), compNames=compareIO.getAvailableNames(), nCores=nCores, progress=True, cutoff=self.matchReqs['Artist'])
             if verbose: ts.stop()
                 
             artistNameMatches  = self.selectArtistsForMediaMatch(artistMatchResults, self.matchReqs['Artist'])

@@ -24,11 +24,33 @@ def poolMatchAlbumsRunner(item, *args, **kwargs):
         retval = Series({key: poolMatchStringSeries(value["Base"], value["Compare"], showProgress=False) for key,value in item.items()})
     return retval
     
-def poolMatchStringSeries(base: Series, compare: Series, showProgress=True):
-    if showProgress is True:
-        retval = Series({baseid: compare.apply(getLevenshtein, x2=baseName) for baseid,baseName in tqdm(iterable=base.iteritems(), total=len(base))})
+def poolMatchStringSeries(base: Series, compare: Series, showProgress=True, cutoff=None):
+    if isinstance(cutoff,float):
+        if showProgress is True:
+            retval = {}
+            for baseid,baseName in tqdm(iterable=base.iteritems(), total=len(base)):
+                retval[baseid] = {}
+                for compareid,compareName in compare.iteritems():
+                    value = getLevenshtein(compareName, baseName)
+                    if value >= cutoff:
+                        retval[baseid][compareid] = value
+                retval[baseid] = Series(retval[baseid])
+            retval = Series(retval)
+        else:
+            retval = {}
+            for baseid,baseName in base.iteritems():
+                retval[baseid] = {}
+                for compareid,compareName in compare.iteritems():
+                    value = getLevenshtein(compareName, baseName)
+                    if value >= cutoff:
+                        retval[baseid][compareid] = value
+                retval[baseid] = Series(retval[baseid])
+            retval = Series(retval)
     else:
-        retval = Series({baseid: compare.apply(getLevenshtein, x2=baseName) for baseid,baseName in base.iteritems()})
+        if showProgress is True:
+            retval = Series({baseid: compare.apply(getLevenshtein, x2=baseName) for baseid,baseName in tqdm(iterable=base.iteritems(), total=len(base))})
+        else:
+            retval = Series({baseid: compare.apply(getLevenshtein, x2=baseName) for baseid,baseName in base.iteritems()})
     return retval
 
 

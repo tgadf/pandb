@@ -6,7 +6,7 @@ from master import MasterMetas
 from gate import IOStore
 from musicdb import PanDBIO
 from listUtils import getFlatList
-from .albumreq import AlbumReq
+from .albumreq import MatchReq
 from .utils import write
 from pandas import DataFrame, concat, Index, Series
 from typing import Union    
@@ -58,13 +58,6 @@ class MatchDBDataIO:
         countsData = countsData.rename(columns={col: "Num{0}".format(col) for col in countsData.columns})
         countsData["NumMedia"] = countsData.sum(axis=1)
         self.countsData = countsData
-        
-    def loadMediaDataX(self):
-        mediaData = []
-        for mediaType in self.mediaTypes:
-            mediaData.append(eval("self.mdbio.data.getSearch{0}MediaData()".format(mediaType)))  ## This does not work with list comprehension
-        self.mediaData = concat(mediaData, axis=1)
-        if self.verbose: write(4, "Found {0: >7} Artists Media Data In {1} DB", (self.mediaData.shape[0], self.mdbio.db))
             
             
 
@@ -119,19 +112,18 @@ class MatchDBDataIO:
             assert isinstance(self.crossCheckIDDF, DataFrame), "setAvailableNames() must be called"
             return self.crossCheckIDDF.join(self.namesData)["Name"]
         
-    def setAvailableNames(self, req: Union[AlbumReq,Index,list]):
+    def setAvailableNames(self, req: Union[MatchReq,Index,list]):
         assert isinstance(self.namesData, DataFrame), "loadNames() must be called"
         if self.crossCheck is False:
-            if isinstance(req, AlbumReq):
-                numMedia = self.namesData["NumMedia"]
-                write(4, "{0: >7} Available Artists With [{1}/{2}] Min/Max Albums", (numMedia.count(), numMedia.min(), numMedia.max()))
-                self.possibleIDs  = req.valid(self.namesData["NumMedia"])
+            if isinstance(req, MatchReq):
+                self.possibleIDs,cuts = req.valid(names=self.namesData["Name"], albums=self.namesData["NumMedia"])
                 self.possibleIDDF = DataFrame(index=self.possibleIDs)
                 numMedia = self.namesData.loc[self.possibleIDs]["NumMedia"]
-                write(4, "{0: >7} Possible Artists With [{1}/{2}] Min/Max Albums", (numMedia.count(), numMedia.min(), numMedia.max()))
+                for cutkey,cutval in cuts.items():
+                    write(4, "{0: <20}{1: >7} Artists With [{2}/{3}] Min/Max", ("Cut[{0}]".format(cutkey), cutval[0], cutval[1], cutval[2]))
         else:
-            if isinstance(req, AlbumReq):
-                self.crossCheckIDs  = req.valid(self.namesData["NumMedia"])
+            if isinstance(req, MatchReq):
+                self.crossCheckIDs,cuts = req.valid(names=self.namesData["Name"], albums=self.namesData["NumMedia"])
                 self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
             elif isinstance(req, (Index,list)):
                 self.crossCheckIDs  = req
@@ -148,7 +140,7 @@ class MatchDBDataIO:
             rowMediaValues = getFlatList([mediaTypeData for mediaTypeData in rowMediaValues.values() if isinstance(mediaTypeData,list)])
             return rowMediaValues
         
-        if isinstance(self.mediaData,DataFrame):
+        if isinstance(self.mediaData,Series):
             return
         mediaData = None
         for mediaType in self.mediaTypes:
@@ -218,15 +210,6 @@ class MatchDBDataIO:
     ############################################################################################################################################
     # Get Data We Want
     ############################################################################################################################################
-        
-        if albums is not None:
-            assert isinstance(albums,AlbumReq),"albums must be of class AlbumReq"
-        ids      = kwargs.get("ids")
-        if ids is not None:
-            assert isinstance(ids,list),"ids must be a list"
-        verbose  = kwargs.get("verbose", self.verbose)
-        verbose  = True
-        
     def getDataX(self, **kwargs):
         albums   = kwargs.get("albums")
         if albums is not None:
@@ -244,7 +227,7 @@ class MatchDBDataIO:
         elif isinstance(albums,AlbumReq):
             if verbose: write(2, "MatchDBData({0}).getData(AlbumReq)", self.db)
             self.loadData()
-            ids = albums.valid(self.mediaMatchData["NumMedia"])
+            ids,cuts = albums.valid(self.mediaMatchData["NumMedia"])
             retval = self.mediaMatchData.loc[ids]
         else:
             if verbose: write(2, "MatchDBData({0}).getData():", self.db)

@@ -13,6 +13,7 @@ from .base import SummaryDataBase
 class SearchData(SummaryDataBase):
     def __init__(self, mdbdata, **kwargs):
         super().__init__(mdbdata, **kwargs)
+        self.renames = {"&AMP;": "AND", "&": "AND"}
         
 
     def isSearchable(self, counts):
@@ -21,11 +22,21 @@ class SearchData(SummaryDataBase):
         retval    = reqMedia and reqName
         return retval
     
+    def renameSearchable(self, value):
+        # &AMP; => &
+        # & HIS => & AND HIS
+        if isinstance(value,str):
+            value = value.upper()
+            for oldname,newname in self.renames.items():
+                if oldname in value:
+                    value = value.replace(oldname, newname)
+        return value
+    
     def makeSearchable(self, value):
         if isinstance(value,str):
-            retval = value.upper()
+            retval = self.renameSearchable(value)
         elif isinstance(value,list):
-            retval = [val.upper() for val in value if isinstance(val,str)]
+            retval = [self.renameSearchable(value) for val in value if isinstance(val,str)]
         elif value is None:
             retval = None
         else:

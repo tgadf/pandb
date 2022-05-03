@@ -224,7 +224,9 @@ class PanDBMatch:
         print("  ==> Found [{0}] New Matches".format(len(self.newMasterIndex)))
         
         
-    def merge(self):
+    def merge(self, **kwargs):
+        verbose  = kwargs.get('verbose', False)
+        allownew = kwargs.get('allownew', True)
         if self.matches is None:
             print("No matches so no need to join with master...")
             return
@@ -235,38 +237,41 @@ class PanDBMatch:
         for baseid,masterid in self.knownMasterIndex.iteritems():
             masterData = self.masterResultData[baseid]
             name = masterData["ArtistName"]
-            print(baseid,'\t',name)
+            if verbose: print(baseid,'\t',name)
             dbids = {db: dbid for db,dbid in masterData.iteritems() if notna(dbid)}
             dbids[self.baseDB] = baseid
             for db,dbid in dbids.items():
                 self.pdbio.setdbid(masterid, db, str(dbid), verbose=False)
+        print("  ==> Added [{0}] Known Matches".format(len(self.knownMasterIndex)))
                 
                 
         ###################################################################################################################
         # New Artists
-        ###################################################################################################################        
-        mmeDF = self.pdbio.getData()
-        newArtists = self.masterResultData[self.newMasterIndex.index].T
-        for baseid,name in newArtists["ArtistName"].iteritems():
-            print(baseid,'\t',name)        
-        newArtists.index.name = self.baseDB
-        newArtists = newArtists.reset_index()
-        newArtists.index = [str(uuid4()) for i in newArtists.index]
-        
-        mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
-        
-        print("  ==> Added [{0}] Known Matches".format(len(self.knownMasterIndex)))
-        print("  ==> Added [{0}] New Matches".format(len(self.newMasterIndex)))
-        self.pdbio.saveData(mmeDF)
+        ###################################################################################################################
+        if allownew is True:
+            mmeDF = self.pdbio.getData()
+            newArtists = self.masterResultData[self.newMasterIndex.index].T
+            if verbose:
+                for baseid,name in newArtists["ArtistName"].iteritems():
+                    print(baseid,'\t',name)        
+            newArtists.index.name = self.baseDB
+            newArtists = newArtists.reset_index()
+            newArtists.index = [str(uuid4()) for i in newArtists.index]
+
+            mmeDF = concat([mmeDF, newArtists], axis=0) if newArtists.shape[0] > 0 else mmeDF
+            print("  ==> Added [{0}] New Matches".format(len(self.newMasterIndex)))            
+            self.pdbio.saveData(mmeDF)
                 
                 
         ###################################################################################################################
         # Save Multi Master Data
         ###################################################################################################################        
-        io = FileIO()
-        mdbpd = MusicDBPermDir()
-        multiMasterIndexData = {baseid: {"Data": self.masterResultData[baseid], "Rows": self.pdbio.getRows(masteridxs)} for baseid,masteridxs in self.multiMasterIndex.iteritems()}
-        savename = mdbpd.getMatchPermPath().join("multiMatch.p")
-        print("  ==> Saving [{0}] Multi Match Artists' Data To {1}".format(len(multiMasterIndexData), savename.str))
-        io.save(idata = multiMasterIndexData, ifile = savename)
+        if allownew is True:
+            io = FileIO()
+            mdbpd = MusicDBPermDir()
+            multiMasterIndexData = {baseid: {"Data": self.masterResultData[baseid], "Rows": self.pdbio.getRows(masteridxs)} for baseid,masteridxs in self.multiMasterIndex.iteritems()}
+            savename = mdbpd.getMatchPermPath().join("multiMatch.p")
+            io.save(idata = multiMasterIndexData, ifile = savename)
+            print("  ==> Saving [{0}] Multi Match Artists' Data To {1}".format(len(multiMasterIndexData), savename.str))
+            
         del self.pdbio
