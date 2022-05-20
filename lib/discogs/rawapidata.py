@@ -9,7 +9,7 @@ class RawAPIData(APIIO):
         super().__init__("Discogs")
         self.apikey = "None"
         
-        self.baseURL = "https://api.discogs.com/artists"
+        self.baseURL = "https://api.discogs.com"
         self.format  = "json"
         self.options = {"per_page": "500"}
         
@@ -22,8 +22,25 @@ class RawAPIData(APIIO):
     ##################################################################################################################################################################
     # Artist Release
     ##################################################################################################################################################################
+    def getMasterReleaseURL(self, masterID):
+        return f"{self.baseURL}/masters/{masterID}"
+    
+    def getMasterReleaseData(self, artistName, masterID):
+        print("Searching For Releases For {0: <50}\t".format(f"{artistName} ({masterID})"), end="")
+        searchResults  = []
+        requestResult  = self.get(self.getMasterReleaseURL(masterID))
+        
+        if requestResult is None or len(requestResult) == 0:
+            return None
+        print(isinstance(requestResult,dict))
+        return requestResult
+        
+        
+    ##################################################################################################################################################################
+    # Artist Release
+    ##################################################################################################################################################################
     def getArtistReleasesURL(self, artistID):
-        return "{0}/{1}/releases?page=1&per_page={2}".format(self.baseURL, artistID, self.options["per_page"])
+        return "{0}/artists/{1}/releases?page=1&per_page={2}".format(self.baseURL, artistID, self.options["per_page"])
     
     def getArtistReleases(self, artistName, artistID):
         print("Searching For Releases For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")

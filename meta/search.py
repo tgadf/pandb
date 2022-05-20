@@ -23,6 +23,7 @@ class SearchData(SummaryDataBase):
         return retval
     
     def renameSearchable(self, value):
+        return value.upper()
         # &AMP; => &
         # & HIS => & AND HIS
         if isinstance(value,str):
@@ -32,11 +33,23 @@ class SearchData(SummaryDataBase):
                     value = value.replace(oldname, newname)
         return value
     
+    
+    def makeSearchableX(self, value):
+        if isinstance(value,str):
+            retval = value.upper()
+        elif isinstance(value,list):
+            retval = [val.upper() for val in value if isinstance(val,str)]
+        elif value is None:
+            retval = None
+        else:
+            raise ValueError("Can not make {0} uppercase".format(value))
+        return retval
+    
     def makeSearchable(self, value):
         if isinstance(value,str):
             retval = self.renameSearchable(value)
         elif isinstance(value,list):
-            retval = [self.renameSearchable(value) for val in value if isinstance(val,str)]
+            retval = [self.renameSearchable(val) for val in value if isinstance(val,str)]
         elif value is None:
             retval = None
         else:
@@ -66,8 +79,9 @@ class SearchData(SummaryDataBase):
                 searchData     = searchableData.apply(self.makeSearchable)
                 searchData     = searchData[searchData.index.map(omit.isValid)]
                 searchData.name = key
-                if verbose: print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(len(searchData), len(searchableData), len(summaryData), "ID => {0}".format(key)))
-                eval("self.mdbdata.saveSearch{0}Data".format(key))(data=searchData)
+                if len(searchData) > 0:
+                    print("  ====> Saving [{0} / {1} / {2}] Searchable {3}  Data".format(len(searchData), len(searchableData), len(summaryData), "ID => {0}".format(key)))
+                    eval("self.mdbdata.saveSearch{0}Data".format(key))(data=searchData)
         
         if verbose: ts.stop()
             

@@ -22,7 +22,13 @@ class MatchListDataNames:
     def match(self):
         retval = {}
         ts = Timestat("Matching Master {0} Artists Against {1} List Artists".format(len(self.artistsToMatch), self.listDataToGet.shape[0]))
-        if len(self.artistsToMatch) > 5000:
+        if len(self.artistsToMatch) > 250000:
+            modVal = 100000
+        elif len(self.artistsToMatch) > 100000:
+            modVal = 50000
+        elif len(self.artistsToMatch) > 25000:
+            modVal = 12500
+        elif len(self.artistsToMatch) > 5000:
             modVal = 2500
         elif len(self.artistsToMatch) > 1000:
             modVal = 500

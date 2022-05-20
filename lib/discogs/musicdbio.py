@@ -25,17 +25,22 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Dir
         ############################################################
-        self.dir.addDir("RawAlbumModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
         self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))        
+        self.dir.addDir("RawAlbumModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal")))
+        self.dir.addDir("RawMasterModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child="master"))
         self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
         self.dir.getMusicDBDir("ModValArtist").mkDir()
         self.dir.addDir("ModValAlbum", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="album"))
         self.dir.getMusicDBDir("ModValAlbum").mkDir()
+        self.dir.addDir("ModValMaster", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="master"))
+        self.dir.getMusicDBDir("ModValMaster").mkDir()
         
         ############################################################
         # DB-specific Data
         ############################################################
         self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), arg=True, prefix="artistData"), fname=True)
         self.data.addData("RawArtistAlbum", MusicDBData(path=self.dir.getMusicDBDir("RawAlbumModVal"), arg=True), fname=True)
+        self.data.addData("RawArtistMaster", MusicDBData(path=self.dir.getMusicDBDir("RawMasterModVal"), arg=True), fname=True)
         self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)
         self.data.addData("ModValAlbum", MusicDBData(path=self.dir.getMusicDBDir("ModValAlbum"), arg=True, suffix="DB"), fname=True)
+        self.data.addData("ModValMaster", MusicDBData(path=self.dir.getMusicDBDir("ModValMaster"), arg=True, suffix="DB"), fname=True)

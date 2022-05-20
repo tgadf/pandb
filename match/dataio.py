@@ -6,7 +6,7 @@ from master import MasterMetas
 from gate import IOStore
 from musicdb import PanDBIO
 from listUtils import getFlatList
-from .albumreq import MatchReq
+from .req import MatchReq
 from .utils import write
 from pandas import DataFrame, concat, Index, Series
 from typing import Union    
@@ -14,7 +14,7 @@ from typing import Union
 class MatchDBDataIO:
     def __init__(self, db, mediaTypes=None, mask=True, **kwargs):
         self.mask    = mask
-        assert isinstance(self.mask,(bool,str)), "MatchDBDataIO mask must be bool|str"
+        assert isinstance(self.mask,(tuple,bool,str)), "MatchDBDataIO mask must be bool|str"
         self.verbose = kwargs.get("verbose", True)
         self.dynamic = kwargs.get("dynamic", False)
         self.isBase  = kwargs.get("base", False)
@@ -69,22 +69,34 @@ class MatchDBDataIO:
         self.loadBasicData()
         self.loadCountsData()
         
-        if isinstance(self.mask,str) or (isinstance(self.mask,bool) and self.mask is True):
-            if self.verbose: write(6,"Masking Out Previously Found Artists")
+        if isinstance(self.mask,str) or (isinstance(self.mask,bool) and self.mask is True) or (isinstance(self.mask,tuple)):
+            if self.verbose: write(6,"Masking Artists")
             pdbio  = PanDBIO()
             pdbio.setData()
-            if isinstance(self.mask,str):
-                knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
-                knownIDs  = knownData[knownData[self.mask].notna()][self.mdbio.db]
-            elif self.mask is True:
-                knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
-                knownIDs  = knownData[self.mdbio.db]
+            if isinstance(self.mask,tuple):
+                # require match of 1st entry
+                # require no match of 2nd entry
+                knownData = pdbio.getNotNaDBIDs(self.mask[0])
+                knownIDs  = knownData[self.mask[0]]
+                if self.verbose: write(4, f"Found {knownIDs.shape[0]: >7} Previously Matched {self.mask[0]} Artists")
+                self.basicData  = self.basicData[self.basicData.index.isin(knownIDs)]
+                if self.verbose: write(4, f"Found {self.basicData.shape[0]: >7} Available Artists In {self.mask[0]} DB")
+                knownIDs  = knownData[knownData[self.mask[1]].isna()][self.mdbio.db]
+                if self.verbose: write(4, f"Found {knownIDs.shape[0]: >7} Previously Matched {self.mask[0]} Artists Without A {self.mask[1]} Match")
+                self.basicData  = self.basicData[self.basicData.index.isin(knownIDs)]
             else:
-                raise TypeError("Unknown type for mask")
-            if self.verbose: write(4, "Found {0: >7} Previously Cross Matched Artists", knownIDs.shape[0])
-            
-            self.basicData  = self.basicData[~self.basicData.index.isin(knownIDs)]
-            if self.verbose: write(4, "Found {0: >7} Artists In {1} DB", (self.basicData.shape[0], self.mdbio.db))
+                if isinstance(self.mask,str):
+                    knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
+                    knownIDs  = knownData[knownData[self.mask].notna()][self.mdbio.db]
+                elif self.mask is True:
+                    knownData = pdbio.getNotNaDBIDs(self.mdbio.db)
+                    knownIDs  = knownData[self.mdbio.db]
+                else:
+                    raise TypeError("Unknown type for mask")
+                if self.verbose: write(4, "Found {0: >7} Previously Cross Matched Artists", knownIDs.shape[0])
+
+                self.basicData  = self.basicData[~self.basicData.index.isin(knownIDs)]
+                if self.verbose: write(4, "Found {0: >7} Artists In {1} DB", (self.basicData.shape[0], self.mdbio.db))
             
             del pdbio
             
@@ -121,13 +133,18 @@ class MatchDBDataIO:
                 numMedia = self.namesData.loc[self.possibleIDs]["NumMedia"]
                 for cutkey,cutval in cuts.items():
                     write(4, "{0: <20}{1: >7} Artists With [{2}/{3}] Min/Max", ("Cut[{0}]".format(cutkey), cutval[0], cutval[1], cutval[2]))
+            else:
+                raise TypeError(f"Unknown req type: {type(req)}")
         else:
             if isinstance(req, MatchReq):
                 self.crossCheckIDs,cuts = req.valid(names=self.namesData["Name"], albums=self.namesData["NumMedia"])
                 self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
+                print(cuts)
             elif isinstance(req, (Index,list)):
                 self.crossCheckIDs  = req
                 self.crossCheckIDDF = DataFrame(index=self.crossCheckIDs)
+            else:
+                raise TypeError(f"Unknown req type: {type(req)}")
         
         
         

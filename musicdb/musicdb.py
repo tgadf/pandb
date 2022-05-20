@@ -22,9 +22,10 @@ class PanDB:
                                    
         ############ Add Names ############
         self.addData("", MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname="manualEntries"), fname=True)
-        self.mdbs = MasterDBs()
-        for db in self.mdbs.getDBs():
-            self.addData(db, MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=db), fname=False)
+        if False:
+            self.mdbs = MasterDBs()
+            for db in self.mdbs.getDBs():
+                self.addData(db, MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=db), fname=False)
             
 
     def addData(self, key, mdbDataIO, fname=False):
@@ -46,9 +47,10 @@ class PanDBIO:
         self.mdb      = PanDB(**kwargs)
         self.ids      = IDStore()        
         self.mmeDF    = None
-        for db,mdbDataIO in self.mdb.data.items():
-            if len(db) > 0:
-                exec("self.get{0}Data  = self.mdb.get{0}Data".format(db))
+        if False:
+            for db,mdbDataIO in self.mdb.data.items():
+                if len(db) > 0:
+                    exec("self.get{0}Data  = self.mdb.get{0}Data".format(db))
             
         
         
@@ -66,14 +68,14 @@ class PanDBIO:
         mmeDF = self.mmeDF if mmeDF is None else mmeDF
         print("Saving Master DataFrame To {0}".format(self.mdb.getFilename().str))
         self.mdb.saveData(data=mmeDF)
-        
-        mdbs = MasterDBs()
-        for col,colData in mmeDF.iteritems():
-            if mdbs.isValid(col):
-                values  = colData[colData.notna()].values
-                eval("self.mdb.save{0}Data(data = values)".format(col))
-                #mdbdata = MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=col)
-                #mdbdata.save(data=values)        
+        if False:
+            mdbs = MasterDBs()
+            for col,colData in mmeDF.iteritems():
+                if mdbs.isValid(col):
+                    values  = colData[colData.notna()].values
+                    eval("self.mdb.save{0}Data(data = values)".format(col))
+                    #mdbdata = MusicDBData(path=MusicDBDir(mdbpd.getMusicDBPermPath()), fname=col)
+                    #mdbdata.save(data=values)        
         
     def isValid(self, db):
         if not isinstance(self.mmeDF,DataFrame):

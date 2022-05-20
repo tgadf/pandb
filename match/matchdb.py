@@ -6,8 +6,8 @@ from timeutils import Timestat
 from listUtils import getFlatList
 from .matchlev import getLevenshtein
 from .dataio import MatchDBDataIO
-from .albumreq import MatchReq
-from .results import MatchResults
+from .req import MatchReq
+from .results import PrimaryMatchResults
 from .utils import write
 from .pool import poolMatchNames, poolMatchAlbums
 from pandas import DataFrame, Series, concat
@@ -102,6 +102,10 @@ class MatchDB:
             if verbose: ts.stop()
                 
             artistNameMatches  = self.selectArtistsForMediaMatch(artistMatchResults, self.matchReqs['Artist'])
+            if artistNameMatches.shape[0] == 0:
+                del artistMatchResults
+                self.compareIOs[compareDB] = None
+                continue                
             mediaData          = self.prepareMediaData(artistNameMatches, baseIO, compareIO)
             del artistMatchResults
             del artistNameMatches

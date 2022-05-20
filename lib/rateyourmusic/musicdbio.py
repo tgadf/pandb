@@ -29,3 +29,8 @@ class MusicDBIO(MusicDBIOBase):
         # DB-specific Data
         ############################################################
         self.data.addData("Raw", MusicDBData(path=self.dir.getMusicDBDir("RawModVal"), arg=True), fname=True)
+        
+        self.dir.addDir("SearchMedia", MusicDBDir(path=self.dir.getMusicDBDir("Summary"), child="searchmedia"))    
+        if kwargs.get('mkDirs') is True: self.dir.getMusicDBDir("SearchMedia").mkDir()
+
+        self.data.addData("SearchMedia", MusicDBData(path=self.dir.getMusicDBDir("SearchMedia"), arg=True, prefix="SearchMedia"), fname=True)

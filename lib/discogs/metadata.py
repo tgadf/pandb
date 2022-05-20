@@ -80,6 +80,8 @@ class MetaData(MetaDataBase):
         artistMembers.name = "Members"
 
         metaData = DataFrame([artistAliases,artistGroups,artistMembers]).T
+        metaData["Type"] = metaData.apply(lambda row: self.utils.getArtistType(row), axis=1)
+        
         return metaData
         
     
@@ -128,4 +130,20 @@ class DiscogsMetaDataUtils(MetaDataUtilsBase):
     def getMedia(self, rData):
         media = self.getMediaData(rData, {})
         retval = {mediaType: list({release.code: release.album for release in mediaTypeData}.values()) for mediaType,mediaTypeData in media.items()}
+        return retval
+    
+    def getArtistType(self, row):
+        artistTypes = []
+        if isinstance(row["Groups"], list):
+            artistTypes.append("Person")
+        if isinstance(row["Members"], list):
+            artistTypes.append("Group")
+
+        n = len(artistTypes)
+        if n == 0:
+            retval = "Unknown"
+        elif n == 1:
+            retval = artistTypes[0]
+        else:
+            retval = "Multi"
         return retval
