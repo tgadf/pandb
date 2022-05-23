@@ -149,7 +149,7 @@ class PanDBMatch:
         print(f"{nameQuality: <4}", end="")
         print(f"{mediaQuality: <4}", end=" | ")
         print(f"{name: <40}", end="")
-        print(f"{cname: <40}")
+        print(f"{cname}")
         
         
     def getNameQuality(self, baseName, compName):
@@ -238,9 +238,11 @@ class PanDBMatch:
         hvals = [x.split()[0].strip() for x in vals.split("\n") if len(x) > 0]
         matches = {}
         for hval in hvals:
-            baseid,comparedb,compareid,key,qual,name,cname = self.hashmap[hval]
-            if show: print(f"{hval: <12} | {baseid: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50} | {hval}")
-            matches[key] = qual
+            baseid,comparedb,compareid,key,mediaQuality,name,cname = self.hashmap[hval]
+            nameQuality  = self.getNameQuality(name, cname)
+            if show: self.printSelect(hval, self.baseDB, baseid, comparedb, compareid, True, nameQuality, mediaQuality, name, cname)
+            #if show: print(f"{hval: <12} | {baseid: <25}{comparedb: <15}{compareid: <40}{qual: <5}{name: <50}{cname: <50} | {hval}")
+            matches[key] = mediaQuality
 
         if len(matches) > 0:
             self.uniqueIDs = Series(matches).index.unique(level=0)

@@ -69,7 +69,6 @@ class MatchQuality:
                 raise ValueError(f"Unsure how to handle rank: {rank}")
             
         self.mediaQuality = quality
-        self.qmap = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
         
         
     def getNameQuality(self):
@@ -86,6 +85,7 @@ class MatchResultsBase:
         self.matches    = {}
         self.nameLookup = {}
         self.matchType  = matchType
+        self.qmap = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
         
         
     def show(self):
