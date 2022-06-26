@@ -29,6 +29,8 @@ class MediaMetaData:
                     retval[mediaTypeRankName] = {}
                 retval[mediaTypeRankName][mediaType] = mediaTypeData
         return retval
+    
+    
         
     def getMediaMetaData(self, modValData):
         artistMediaData = modValData.apply(self.utils.getMedia, maxNum=self.maxMediaNum)

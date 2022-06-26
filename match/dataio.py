@@ -151,7 +151,8 @@ class MatchDBDataIO:
     ############################################################################################################################################
     # Load Joined Media Data
     ############################################################################################################################################
-    def loadMedia(self, ids=None):
+    def loadMedia(self, ids=None, **kwargs):
+        allowMissing = kwargs.get('allowMissing', False)
         def flattenMediaData(row: Series) -> 'dict':
             rowMediaValues = {mediaType: row.get("{0}Media".format(mediaType),[]) for mediaType in self.mediaTypes}
             rowMediaValues = getFlatList([mediaTypeData for mediaTypeData in rowMediaValues.values() if isinstance(mediaTypeData,list)])
@@ -163,12 +164,11 @@ class MatchDBDataIO:
         for mediaType in self.mediaTypes:
             searchMediaData = eval("self.mdbio.data.getSearch{0}MediaData()".format(mediaType))
             if isinstance(searchMediaData,Series):
-                #print(mediaType,'\t',searchMediaData.shape)
-                searchMediaData = searchMediaData[ids] if isinstance(ids, (list,Index)) else searchMediaData
-                #print(mediaType,'\t',searchMediaData.shape)
+                if allowMissing is False:  ## Nominal Mode
+                    searchMediaData = searchMediaData[ids] if isinstance(ids, (list,Index)) else searchMediaData
+                else:  ## Evaluation Mode
+                    searchMediaData = searchMediaData[searchMediaData.index.isin(ids)] if isinstance(ids, (list,Index)) else searchMediaData
                 mediaData = DataFrame(searchMediaData) if mediaData is None else mediaData.join(searchMediaData)
-                #print(mediaType,'\t',mediaData.shape)
-                #print("")
         assert isinstance(mediaData, DataFrame),"Could not find any media!"
         #print(mediaData.head())
         self.mediaData = mediaData.apply(lambda row: flattenMediaData(row), axis=1)

@@ -163,6 +163,11 @@ class MetaDataUtilsBase:
         retval    = getattr(mediaData, 'media') if hasattr(mediaData, 'media') else default
         return retval
     
+    def getMediaDates(self, rData):
+        media = self.getMediaData(rData, {})
+        retval = {mediaType: [release.year for release in mediaTypeData if isinstance(release.year,(int,str))] for mediaType,mediaTypeData in media.items()}
+        return retval
+    
     def getMedia(self, rData, maxNum=100):
         media = self.getMediaData(rData, {})
         retval = {mediaType: list({release.code: release.album for release in mediaTypeData[:maxNum]}.values()) for mediaType,mediaTypeData in media.items()}

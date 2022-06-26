@@ -4,12 +4,13 @@ __all__ = ["MatchCounts", "MatchDBCounts"]
 
 from gate import IOStore
 from musicdb import PanDBIO
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, isna
+from master import MasterMetas, MasterDBs
 
 class MatchCounts:
     def __init__(self):
-        from master import MasterDBs
-        self.mcs  = {db: MatchDBCounts(db, verbose=False) for db in MasterDBs().getDBs()}
+        mdbs = MasterDBs()
+        self.mcs  = {db: MatchDBCounts(db, verbose=False) for db in mdbs.getDBs()}
         
     def get(self, db=None):
         retval = self.mcs if db is None else self.mcs.get(db)
@@ -21,7 +22,15 @@ class MatchCounts:
     
 
 class MatchDBCounts:
-    def __init__(self, db, mediaTypes=["Album", "SingleEP"], **kwargs):
+    def __init__(self, db, mediaTypes=None, **kwargs):
+        mm = MasterMetas()
+        if mediaTypes is None:
+            mediaTypes = list(mm.getMedias().values())
+        elif isinstance(mediaTypes,list):
+            pass
+        elif isinstance(mediaTypes,str):
+            mediaTypes = [mediaTypes]
+        assert isinstance(mediaTypes,list),f"MediaTypes [{mediaTypes}] is not a list!"
         self.verbose = kwargs.get('verbose', False)
         if self.verbose: print("========= {0} =========".format(db))
         
@@ -79,33 +88,49 @@ class MatchDBCounts:
         ###################################
         try:
             self.searchData = DataFrame(searchNameData).join(summaryNameData).join(summaryNumAlbumsData).join(summaryCountsData)
+            self.searchData = self.searchData.drop(["Name"], axis=1)
         except:
             print("Could not join all data")
             self.searchData = DataFrame()
         #self.searchData = self.searchData.drop(['Name'], axis=0)
         if self.verbose: print("  ===> Found {0: >7}  Artists Search Data".format(self.searchData.shape[0]))
-
+            
         
+        ###################################
+        # Get Master Data
+        ###################################
         try:
-            self.matchedIDs = DataFrame(Series({idx: 1 for idx in eval("pdbio.get{0}Data()".format(db)) if isinstance(idx,str)}, name="Matched"))
+            self.pdbidLookup = pdbio.getIndexLookup(db)
+            self.pdbidLookup.name = "PanDBID"
         except:
-            print("Could not get matched IDs")
-            self.matchedIDs = DataFrame(Series({}, name="Matched"))
+            print("Could not get PanDBID Lookup")
+            self.pdbidLookup = Series(dtype='object')
 
-        self.searchData = self.searchData.join(self.matchedIDs)
-        self.searchData["Matched"] = self.searchData["Matched"].fillna(0).astype(int)
+        self.searchData = self.searchData.join(self.pdbidLookup)
+        def matchType(x):
+            if isinstance(x,str):
+                return 1
+            elif isinstance(x,list):
+                return 2
+            elif isna(x):
+                return 0
+            else:
+                raise ValueError(f"Not sure what pdbid [{x}] this is...")
+                
+        self.searchData["MatchType"] = self.searchData["PanDBID"].apply(matchType)
 
-        numMatched = self.searchData["Matched"].sum()
-        numArtists = self.searchData.shape[0]
+        numMatched   = self.searchData[self.searchData["MatchType"] > 0].shape[0]
+        numArtists   = self.searchData.shape[0]
+        numUnMatched = numArtists - numMatched
         if numArtists > 0:
             self.fracMatched = round(100*numMatched/numArtists,1)
         else:
             self.fracMatched = -1.0
-        if self.verbose: print("  ===> Found {0: >7}  Unmatched Artists Search Data".format(self.searchData["Matched"].sum()))
-        if self.verbose: print("  ===> Found {0: >7}% Fraction Matched Artists".format(self.fracMatched))
+        if self.verbose: print(f"  ===> Found {numUnMatched: >7}  Unmatched Artists Search Data")
+        if self.verbose: print(f"  ===> Found {self.fracMatched: >7}% Fraction Matched Artists")
 
         try:
-            self.unmatchedData = self.searchData[self.searchData["Matched"] == 0].sort_values(by="NumMedia", ascending=False)
+            self.unmatchedData = self.searchData[self.searchData["MatchType"] == 0].sort_values(by="NumMedia", ascending=False)
             self.stats = Series({"fM": self.fracMatched, "Max": self.unmatchedData["NumMedia"].max(),
                           "10": self.unmatchedData["NumMedia"].head(10).min(), "100": self.unmatchedData["NumMedia"].head(100).min(),
                           "500": self.unmatchedData["NumMedia"].head(500).min(), "2500": self.unmatchedData["NumMedia"].head(2500).min()}, name=db)
@@ -122,7 +147,7 @@ class MatchDBCounts:
         
 
     def get(self):
-        return self.searchData
+        return self.searchData.sort_values(by="NumMedia", ascending=False)
             
     def getUnmatched(self):
-        return self.unmatchedData
+        return self.unmatchedData.sort_values(by="NumMedia", ascending=False)

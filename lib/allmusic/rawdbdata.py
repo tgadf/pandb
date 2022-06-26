@@ -25,6 +25,7 @@ class RawDBData(RawDataBase):
         self.assertData()
         
         self.getBasicData()
+        #return self.bsdata
         
         data                = {}
         data["artist"]      = self.getName()
@@ -42,17 +43,38 @@ class RawDBData(RawDataBase):
     ##############################################################################################################################
     def getBasicData(self):
         scriptData = self.bsdata.find("script", {"type": "application/ld+json"})
-        try:
-            jData = json.loads(scriptData.text)
-        except:
-            jData = {}
+        if isinstance(scriptData, element.Tag):
+            try:
+                jData = json.loads(scriptData.text)
+            except:
+                jData = {}
+
+            self.name   = jData.get('name')
+            self.type   = jData.get('@type')
+            self.url    = jData.get('url')
+            self.image  = jData.get('image')
+            self.descr  = jData.get('description')
+            self.member = jData.get('member', [])
+        else:
+            ## Name
+            h1 = self.bsdata.find("h1", {"class": "artist-name"})
+            self.name = h1.text.replace("\n", "").strip() if isinstance(h1, element.Tag) else None
             
-        self.name   = jData.get('name')
-        self.type   = jData.get('@type')
-        self.url    = jData.get('url')
-        self.image  = jData.get('image')
-        self.descr  = jData.get('description')
-        self.member = jData.get('member', [])
+            ## Type
+            self.type = None
+            
+            ## URL
+            metaurl   = self.bsdata.find("meta", {"property": "og:url"})
+            self.url   = metaurl.attrs['content'] if isinstance(metaurl, element.Tag) else None
+            
+            ## Image
+            self.image = None
+            
+            ## Description
+            self.descr  = None
+            
+            ## Member
+            self.member = []
     
 
     ##############################################################################################################################

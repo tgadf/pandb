@@ -75,18 +75,18 @@ class MetaData(MetaDataBase):
     ###############################################################################################################
     def getLinkMetaData(self, modValData): 
         artistAliases = modValData.apply(self.utils.getAliases)
-        artistAliases = artistAliases.apply(self.utils.fixSplitText)
         artistAliases.name = "AlsoKnownAs"
 
         artistMembers = modValData.apply(self.utils.getMembers)
-        artistMembers = artistMembers.apply(self.utils.fixSplitText)
         artistMembers.name = "Members"
 
         artistMemberOf = modValData.apply(self.utils.getMemberOf)
-        artistMemberOf = artistMembers.apply(self.utils.fixSplitText)
         artistMemberOf.name = "MemberOf"            
 
-        metaData = DataFrame([artistAliases,artistMembers,artistMemberOf]).T
+        artistRelated = modValData.apply(self.utils.getRelated)
+        artistRelated.name = "Related"
+
+        metaData = DataFrame([artistAliases,artistMembers,artistMemberOf,artistRelated]).T
         return metaData
 
             
@@ -100,7 +100,24 @@ class MetaData(MetaDataBase):
         artistTags = modValData.apply(self.utils.getTags)
         artistTags.name = "Tag"
 
-        metaData = DataFrame([artistGenres,artistTags]).T
+        artistMoods = modValData.apply(self.utils.getMoods)
+        artistMoods.name = "Mood"
+
+        artistThemes = modValData.apply(self.utils.getThemes)
+        artistThemes.name = "Theme"
+
+        metaData = DataFrame([artistGenres,artistTags,artistMoods,artistThemes]).T
+        return metaData
+
+            
+    ###############################################################################################################
+    # Metric MetaData
+    ###############################################################################################################
+    def getMetricMetaData(self, modValData): 
+        artistNumTabs = modValData.apply(self.utils.getNumTabs)
+        artistNumTabs.name = "NumTabs"
+
+        metaData = DataFrame(artistNumTabs)
         return metaData
         
     
@@ -171,9 +188,26 @@ class AllMusicMetaDataUtils(MetaDataUtilsBase):
     def getMemberOf(self, rData):
         retval = self.getItems(self.getGeneralData(rData, "member-of"))
         return retval
+            
+    def getRelated(self, rData):
+        retval = self.getItems(self.getExtraData(rData, "related"))
+        return retval
+            
+    def getNumTabs(self, rData):
+        tabs   = self.getExtraData(rData, "tabs")
+        retval = len(tabs) if isinstance(tabs,(list,dict)) else 0
+        return retval
 
     def getGenres(self, rData):
         retval = self.getTextItems(self.getGenresData(rData))
+        return retval
+
+    def getMoods(self, rData):
+        retval = self.getTextItems(self.getGeneralData(rData, "moods"))
+        return retval
+
+    def getThemes(self, rData):
+        retval = self.getTextItems(self.getGeneralData(rData, "themes"))
         return retval
 
     def getTags(self, rData):

@@ -5,6 +5,8 @@ __all__ = ["PanDBIO"]
 from base import MusicDBDir, MusicDBData
 from master import MusicDBPermDir, MasterDBs
 from gate import IDStore
+from pandas import DataFrame
+from .pandb import PanDB
 from .utils import PanDBUtils
 from .metrics import PanDBMetrics
 
@@ -13,6 +15,7 @@ from .metrics import PanDBMetrics
 ####################################################################################################################    
 class PanDBIO:
     def __init__(self, **kwargs):
+        self.pdb = PanDB()
         utils    = PanDBUtils(**kwargs)
         metrics  = PanDBMetrics(**kwargs)
         
@@ -25,5 +28,4 @@ class PanDBIO:
         for attribute,attribute_value in attributeList.items():
             if callable(attribute_value) and attribute.startswith('__') == False:
                 exec(f"self.{attribute} = utils.{attribute}")
-                
-        print(dir(self))
+        

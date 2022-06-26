@@ -230,6 +230,12 @@ class RawDBData(RawDataBase):
                 refs = tag.findAll("a")
                 generalData["Born"]  = [self.makeRawTextData(tag)] if len(refs) == 0 else [self.makeRawLinkData(ref) for ref in refs]
 
+        if profileData.get("Died"):
+            tag = profileData["Died"]
+            if tag is not None:
+                refs = tag.findAll("a")
+                generalData["Died"]  = [self.makeRawTextData(tag)] if len(refs) == 0 else [self.makeRawLinkData(ref) for ref in refs]
+
         if profileData.get("Currently"):
             tag = profileData["Currently"]
             if tag is not None:

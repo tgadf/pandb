@@ -58,7 +58,7 @@ class MatchDB:
             self.compareIOs[compareDB] = compareIO
         
         self.diagnostics = {}
-        self.mres = MatchResults(self.baseIO)
+        self.mres = PrimaryMatchResults(self.baseIO)
         self.save = self.mres.save
         self.results = {}
         

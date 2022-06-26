@@ -1,6 +1,6 @@
 """ Match Results """
 
-__all__ = ["PrimaryMatchResults", "CrossMatchResults"]
+__all__ = ["PrimaryMatchResults", "CrossMatchResults", "MatchQualityNames", "MatchQuality"]
 
 from master import MusicDBPermDir
 from ioutils import FileIO
@@ -10,30 +10,41 @@ from pandas import Series
 
 class MatchQuality:
     def __init__(self, rank: dict, baseName: str, compName: str):
-        ################################################################################################
-        ## Name Quality
-        ################################################################################################        
-        similarity = getLevenshtein(baseName, compName)
+        self.mqnames  = MatchQualityNames()
         self.baseName = baseName
         self.compName = compName
-        quality = None
-        if similarity >= 1.0:
-            quality = "Pure"
-        elif similarity >= 0.95:
-            quality = "Great"
-        elif similarity >= 0.9:
-            quality = "Good"
-        elif similarity >= 0.85:
-            quality = "Near"
-        else:
-            quality = "Low"
-            
-        self.nameQuality = quality
+        self.rank     = rank
         
+        ## Name Quality
+        self.setNameQuality(baseName, compName)
         
-        ################################################################################################
         ## Media Quality
-        ################################################################################################
+        self.setMediaQuality(rank)
+        
+        
+    def getNameQuality(self):
+        return self.nameQuality
+    
+    def getMediaQuality(self):
+        return self.mediaQuality
+        
+        
+    def setNameQuality(self, baseName, compName):
+        similarity = getLevenshtein(baseName, compName)
+        if isinstance(similarity,float):
+            for qualityName,qualityValue in self.mqnames.nameQualityValues.items():
+                if similarity >= qualityValue:
+                    self.nameQuality = qualityName
+                    break
+        else:
+            self.nameQuality = None
+        
+                                    
+        
+    ####################################################################################################################
+    ## Media Quality
+    ####################################################################################################################
+    def setMediaQuality(self, rank):
         quality = None
         if rank["Medium"] == 0:
             quality = "None"
@@ -71,31 +82,60 @@ class MatchQuality:
         self.mediaQuality = quality
         
         
-    def getNameQuality(self):
-        return self.nameQuality
+class MatchQualityNames:
+    def __init__(self, **kwargs):
+        self.nameQualityValues  = {"Pure": 1.0, "Great": 0.95, "Good": 0.90, "Near": 0.85, "Low": 0.0}
+        self.mediaQualityValues = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
+        self.qmap = self.mediaQualityValues
+        self.mediaMatchValues   = {"Loose": 0.7, "Medium": 0.8, "Tight": 0.9, "Exact": 0.95}    
+                    
+    def getNameQualityValues(self):
+        return self.nameQualityValues
+        
+    def getMediaQualityValues(self):
+        return self.mediaQualityValues
+        
+    def getMediaMatchValues(self):
+        return self.mediaMatchValues
     
-    def getMediaQuality(self):
-        return self.mediaQuality
         
-        
-
 class MatchResultsBase:
     def __init__(self, matchType, **kwargs):
         self.dbs        = []
         self.matches    = {}
         self.nameLookup = {}
         self.matchType  = matchType
-        self.qmap = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
-        
+        self.mqnames    = MatchQualityNames()
+                                    
         
     def show(self):
         if len(self.matches) > 0:
             dbMatches = Series(self.matches).reset_index()
             dbMatches.columns = ["DB", "MediaQuality", "NameQuality", "BaseID", "CompareID", "Match"]
-            print("==== Match Results ====")
-            print(dbMatches["MediaQuality"].value_counts())
+            self.showDBQuality(dbMatches)
+            self.showNameQuality(dbMatches)
+            self.showMediaQuality(dbMatches)
         else:
             print("No Matches To Show")
+            
+            
+    def showDBQuality(self, dbMatches):
+        print("By DB:")
+        vc = dbMatches["DB"].value_counts()
+        for db,dbCount in vc.iteritems():
+            print(f"  {db: <20}{dbCount}")
+            
+    def showNameQuality(self, dbMatches):
+        print("By NameQuality:")
+        vc = dbMatches["NameQuality"].value_counts()
+        for qName,qRank in self.mqnames.nameQualityValues.items():
+            print(f"  {qName: <7}{vc.get(qName, 0)}")
+            
+    def showMediaQuality(self, dbMatches):
+        print("By MediaQuality:")
+        vc = dbMatches["MediaQuality"].value_counts()
+        for qName,qRank in self.mqnames.mediaQualityValues.items():
+            print(f"{qName: <7}{vc.get(qName, 0)}")
         
         
     def get(self):
@@ -103,17 +143,10 @@ class MatchResultsBase:
             print("==== Match Results ====")
             dbMatches = Series(self.matches).reset_index()
             dbMatches.columns = ["DB", "MediaQuality", "NameQuality", "BaseID", "CompareID", "Match"]
+            self.showDBQuality(dbMatches)
+            self.showNameQuality(dbMatches)
+            self.showMediaQuality(dbMatches)
 
-            print("By DB:")
-            print(dbMatches["DB"].value_counts())
-            print("By NameQuality:")
-            vc = dbMatches["NameQuality"].value_counts()
-            for qName,qRank in self.qmap.items():
-                print(f"{qName: <7}{vc.get(qName, 0)}")
-            print("By MediaQuality:")
-            vc = dbMatches["MediaQuality"].value_counts()
-            for qName,qRank in self.qmap.items():
-                print(f"{qName: <7}{vc.get(qName, 0)}")
         else:
             dbMatches = Series(self.matches).reset_index()
             dbMatches.columns = ["Index", "Match"]

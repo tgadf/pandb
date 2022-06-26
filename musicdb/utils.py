@@ -3,8 +3,12 @@
 __all__ = ["PanDBUtils"]
 
 from gate import IDStore, IOStore
-from pandas import to_numeric, Series, DataFrame
+from utils import MusicDBArtistName
 from .pandb import PanDB
+from timeutils import Timestat
+from hashlib import md5
+from pandas import to_numeric, Series, DataFrame, isna, notna, concat
+from uuid import uuid4
 
 ####################################################################################################################    
 ## Summary
@@ -19,16 +23,72 @@ class PanDBUtils:
         
     def setData(self):
         self.mmeDF    = self.mmeDF if isinstance(self.mmeDF, DataFrame) else self.pdb.getData()
+                
+    def saveData(self, mmeDF=None):
+        if isinstance(mmeDF, DataFrame):
+            if self.verbose: print("Saving External PanDB DataFrame ... ", end="")
+            self.pdb.saveData(data=mmeDF)
+            if self.verbose: print("Done")
+        else:
+            if self.verbose: print("Saving Internal PanDB DataFrame ... ", end="")
+            self.pdb.saveData(data=self.mmeDF)
+            if self.verbose: print("Done")
         
+    def getData(self):
+        self.setData()
+        return self.mmeDF
+        
+
+    ####################################################################################################################    
+    ## Artist Helpers
+    ####################################################################################################################   
+    def cleanArtistNames(self, saveit=True):
+        self.setData()
+        ts = Timestat("Cleaning Artist Names")
+        manc = MusicDBArtistName()
+        cleanNames = self.mmeDF["ArtistName"].map(manc.clean)
+        numDiff = (cleanNames != self.mmeDF["ArtistName"]).sum()
+        print(f"Found {numDiff} Names Needed To Be Cleaned")
+        self.mmeDF["ArtistName"] = cleanNames
+        if saveit is True:
+            self.pdb.saveData(data=self.mmeDF)
+        else:
+            print("Not saving cleaned data.")
+        ts.stop()
+        
+        
+    ####################################################################################################################    
+    ## Index
+    ####################################################################################################################  
+    def setIndex(self):
+        self.setData()
+        assert "SubRank" in self.mmeDF.columns, "Must call getSubRank() before setting index"
+        self.cleanArtistNames(saveit=False)
+
+        def getHash(name):
+            m = md5()
+            m.update(name.upper().encode())
+            return m.hexdigest()[:12]
+
+        ts = Timestat("Creating Artist Indices")
+        self.mmeDF["Hash"] = self.mmeDF["ArtistName"].map(getHash)
+        self.mmeDF["xx"] = 'xx'
+        self.mmeDF.index = self.mmeDF["Hash"] + self.mmeDF['xx'] + self.mmeDF["SubRank"].apply(lambda sr: sr[0]).astype(str)
+        self.mmeDF = self.mmeDF.drop(['Hash', 'xx'], axis=1)
+        ts.stop()
+        self.saveData()
         
 
     ####################################################################################################################    
     ## Interal Helpers
     ####################################################################################################################
-    def getIndexLookup(self, db):
+    def getIndexLookup(self, db):        
         self.setData()
+        #if self.verbose: print(f"Getting PanDBID <=> {db} Lookup. ", end="")
         dblookup = {}
-        for idx,dbid in self.getNotNaDBIDs(db)[db].iteritems():
+        notnaDBIDs = self.getNotNaDBIDs(db)[db]
+        N = len(notnaDBIDs)
+        for idx,dbid in notnaDBIDs.iteritems():
             if isinstance(dbid,str):
                 if dblookup.get(dbid) is None:
                     dblookup[dbid] = []
@@ -39,6 +99,7 @@ class PanDBUtils:
                         dblookup[val] = []
                     dblookup[val].append(idx)
         retval = Series(dblookup).apply(lambda dbid: dbid[0] if (isinstance(dbid,list) and len(dbid) == 1) else dbid)
+        #if self.verbose: print(f"Found {len(retval)}/{N} IDs")
         return retval
     
     def getNotNaDBIDs(self, db):
@@ -59,25 +120,44 @@ class PanDBUtils:
 
     def getMMEByArtist(self, name, match="E"):
         self.setData()
-        if isinstance(match, str):
-            if match == "E":
-                return self.mmeDF[self.mmeDF["ArtistName"] == name]
-            elif match == "C":
-                return self.mmeDF[self.mmeDF["ArtistName"].str.contains(name)]
+        if isinstance(name,list):
+            if isinstance(match, str):
+                if match == "E":
+                    return self.mmeDF[self.mmeDF["ArtistName"].isin(name)]
+                else:
+                    print("Did not understand match={0}".format(match))
+                    return None
             else:
-                print("Did not understand match={0}".format(match))
                 return None
-        elif isinstance(match, int):
-            idxs = self.mmeDF["ArtistName"].apply(lambda x: Levenshtein.ratio(x.upper(), name.upper())).sort_values(ascending=False).head(match).index
-            return self.mmeDF.loc[idxs]
-        else:
-            return None
-    
+        if isinstance(name,str):
+            if isinstance(match, str):
+                if match == "E":
+                    return self.mmeDF[self.mmeDF["ArtistName"] == name]
+                elif match == "C":
+                    return self.mmeDF[self.mmeDF["ArtistName"].str.contains(name)]
+                else:
+                    print("Did not understand match={0}".format(match))
+                    return None
+            elif isinstance(match, int):
+                idxs = self.mmeDF["ArtistName"].apply(lambda x: Levenshtein.ratio(x.upper(), name.upper())).sort_values(ascending=False).head(match).index
+                return self.mmeDF.loc[idxs]
+            else:
+                return None
+
+        
+    ####################################################################################################################    
+    ## Printers
+    ####################################################################################################################    
+    def printRow(self, idx):
+        row = self.getRows(idx) if isinstance(idx,str) else None
+        if isinstance(row,Series):
+            df  = DataFrame(row[row.notna()]).T
+            print(df.to_string())
     
     
     ####################################################################################################################    
     ## Interal Setter Helpers
-    ####################################################################################################################
+    ####################################################################################################################    
     def getRows(self, idx):
         self.setData()
         return self.mmeDF.loc[idx]
@@ -89,7 +169,7 @@ class PanDBUtils:
             if verbose: print("  ==> Set [{0}/{1}] to [None]".format(idx,db))
             return
         
-        if db == "Spotify":
+        if db in ["Spotify", "SetListFM", "JioSaavn"]:
             self.mmeDF.loc[idx, db] = str(dbID)
             if verbose: print("  ==> Set [{0}/{1}] to [{2}]".format(idx,db,dbID))
             return

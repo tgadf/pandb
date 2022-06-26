@@ -8,11 +8,12 @@ __all__ = ["MasterMetas"]
 class MasterMetas:
     def __init__(self, **kwargs):
         verbose = kwargs.get('verbose', False)
-        self.medias = {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
+        self.medias      = {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
+        self.mediaRanks  = {"Primary": ["Album", "SingleEP"], "Secondary": ["Appearance", "Mix", "Bootleg"], "Tertiary": ["Technical", "AltMedia", "Other"]}
         self.mediaAlbums = [self.medias['A'],self.medias['B']]
-        self.metas  = {"Basic": ["Name", "Ref", "NumAlbums"], "Media": ["{0}Media".format(media) for media in self.medias.values()],
-                       "Genre": ["Genre"], "Bio": ["Bio"], "Link": ["Link"], "Metric": ["Metric"], "Counts": ["Counts"]}
-        self.searches = ["Name"] + ["{0}Media".format(media) for media in ["Album", "SingleEP", "Appearance", "Technical", "Mix", "Bootleg", "AltMedia", "Other"]]
+        self.metas       = {"Basic": ["Name", "Ref", "NumAlbums"], "Media": ["{0}Media".format(media) for media in self.medias.values()],
+                            "Genre": ["Genre"], "Bio": ["Bio"], "Link": ["Link"], "Metric": ["Metric"], "Counts": ["Counts"], "Dates": ["Dates"]}
+        self.searches    = ["Name"] + ["{0}Media".format(media) for media in ["Album", "SingleEP", "Appearance", "Technical", "Mix", "Bootleg", "AltMedia", "Other"]]
         if verbose is True:
             print("MasterMetas()")
             print("{0: <18}{1}".format("  ==> Media:", list(self.medias.values())))
@@ -21,6 +22,9 @@ class MasterMetas:
         
     def getMedias(self):
         return self.medias
+        
+    def getMediaRanks(self):
+        return self.mediaRanks
     
     def getMetas(self):
         return self.metas

@@ -41,10 +41,14 @@ def moveLocalFiles(**kwargs):
         data    = io.get(ifile)
         dbID    = mioGlobal.getdbid(data)
         modVal  = mioGlobal.getModVal(dbID)
-        dstFile = FileInfo(mioGlobal.data.getRawFilename(modVal,dbID))
-        print(ifile,'\t',dstFile.path)
+        try:
+            dstFile = FileInfo(mioGlobal.data.getRawFilename(modVal,dbID))
+        except:
+            raise ValueError(f"Could not get Filename for [{ifile}] , dbid={dbID}, modval={modVal}")
+            
+        if verbose: print(ifile,'\t',dstFile.path)
         if dstFile.exists():
-            print("  ==> File exists")
+            if verbose: print("  ==> File exists")
             continue
         FileIO().save(idata=open(ifile).read(), ifile=dstFile.path)
         #srcFile = FileInfo(ifile)

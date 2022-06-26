@@ -177,6 +177,30 @@ class SummaryData(SummaryDataBase):
             
 
     ###########################################################################################################################################################
+    # Artist ID => Dates
+    ###########################################################################################################################################################
+    def makeDatesSummaryData(self):
+        summaryType = "Dates"
+        if self.verbose: ts = Timestat("Making {0} {1} Summary Data".format(self.db, summaryType))
+        
+        artistIDToDates     = None
+        for i,modVal in enumerate(self.modVals):
+            if (i+1) % 25 == 0 or (i+1) == 5:
+                if self.verbose: ts.update(n=i+1, N=len(self.modVals))
+            modValMetaData = self.mdbdata.getMetaDatesData(modVal) if self.mdbdata.getMetaDatesFilename(modVal).exists() else None            
+            if isinstance(modValMetaData,DataFrame):
+                artistIDToDates = concat([artistIDToDates, modValMetaData]) if artistIDToDates is not None else modValMetaData
+            
+        if isinstance(artistIDToDates,DataFrame):
+            #artistIDToBio = artistIDToBio.apply(Series)
+            print("  ====> Saving [{0}] {1} Summary Data".format(artistIDToDates.shape[0], "ID => {0}".format(summaryType)))
+            self.mdbdata.saveSummaryDatesData(data=artistIDToDates)
+        
+        if self.verbose: ts.stop()
+            
+            
+
+    ###########################################################################################################################################################
     # Artist ID => Metric
     ###########################################################################################################################################################
     def makeMetricSummaryData(self):

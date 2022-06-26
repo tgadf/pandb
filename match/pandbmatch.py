@@ -1,6 +1,6 @@
 """ Master Match Categories """
 
-__all__ = ["PanDBMatch"]
+__all__ = ["PanDBMatch", "PanDBMulti"]
 
 from musicdb import PanDBIO
 from master import MusicDBPermDir, MasterDBs
@@ -16,8 +16,34 @@ from .matchlev import getLevenshtein
 from numpy import unique
 
 
-class PanDBMatch:
+
+class PanDBMatchBase:
+    def __init__(self, **kwargs):
+        self.qmap       = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
+        self.maxQual    = max(self.qmap.values())+1
+
+        mdbpd = MusicDBPermDir()
+        self.primaryMatchFilename      = mdbpd.getMatchPermPath().join("primaryMatch.p")
+        self.primaryMatchNamesFilename = mdbpd.getMatchPermPath().join("primaryMatchNames.p")
+        self.crossMatchFilename        = mdbpd.getMatchPermPath().join("crossMatch.p")
+        self.crossMatchNamesFilename   = mdbpd.getMatchPermPath().join("crossMatchNames.p")
+        self.multiMatchFilename        = mdbpd.getMatchPermPath().join("multiMatch.p")
+        
+        
+class PanDBMulti(PanDBMatchBase):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.verbose = kwargs.get('verbose', True)
+        printIntro("PanDBMulti")
+        
+    def get(self):
+        io = FileIO()
+        return io.get(self.multiMatchFilename)
+
+        
+class PanDBMatch(PanDBMatchBase):
     def __init__(self, baseDB: str, **kwargs):
+        super().__init__(**kwargs)
         self.verbose = kwargs.get('verbose', True)
         printIntro("PanDBMatch")
 
@@ -27,11 +53,9 @@ class PanDBMatch:
         self.pdbio   = PanDBIO()
         self.pdbio.setData()
             
-        self.baseDB  = baseDB
-        self.qmap = {"Pure": 8, "Great": 7, "Good": 6, "Sole": 5, "Near": 4, "Loose": 3, "Low": 2, "Poor": 1}
-        self.maxQual = max(self.qmap.values())+1
-        self.compareDBs    = []
-        self.hashmap = {}
+        self.baseDB     = baseDB
+        self.compareDBs = []
+        self.hashmap    = {}
         self.load()
         
         
@@ -41,11 +65,10 @@ class PanDBMatch:
 
     def load(self):
         io = FileIO()
-        mdbpd = MusicDBPermDir()
-        primaryMatchResults = io.get(mdbpd.getMatchPermPath().join("primaryMatch.p"))
-        self.primaryMatchNames   = io.get(mdbpd.getMatchPermPath().join("primaryMatchNames.p"))
-        crossMatchResults   = io.get(mdbpd.getMatchPermPath().join("crossMatch.p"))
-        self.crossMatchNames     = io.get(mdbpd.getMatchPermPath().join("crossMatchNames.p"))        
+        primaryMatchResults    = io.get(self.primaryMatchFilename)
+        self.primaryMatchNames = io.get(self.primaryMatchNamesFilename)
+        crossMatchResults      = io.get(self.crossMatchFilename)
+        self.crossMatchNames   = io.get(self.crossMatchNamesFilename)
 
         ################################################################################################################################################
         # Primary Match Results
@@ -131,15 +154,16 @@ class PanDBMatch:
         
     def printSelect(self, hval, basedb, baseid, comparedb, compareid, first, nameQuality, mediaQuality, name, cname):
         print(f"{hval: <12}", end=" | ")
-        if basedb == "MusicBrainz":
-            pval = f"{baseid: <42}" if first is True else f"{' ': <42}"
-        elif basedb == "Spotify":
-            pval = f"{baseid: <30}" if first is True else f"{' ': <30}"
-        else:
-            pval = f"{baseid: <20}" if first is True else f"{' ': <20}"
-        print(f"{pval}", end="")
+        if len(baseid) > 0 and False:
+            if basedb == "MusicBrainz" or True:
+                pval = f"{baseid: <42}" if first is True else f"{' ': <42}"
+            elif basedb == "Spotify":
+                pval = f"{baseid: <30}" if first is True else f"{' ': <30}"
+            else:
+                pval = f"{baseid: <20}" if first is True else f"{' ': <20}"
+            print(f"{pval}", end="")
         print(f"{comparedb: <15}", end="")
-        if comparedb == "MusicBrainz":
+        if comparedb == "MusicBrainz" or True:
             pval = f"{compareid: <42}"
         elif comparedb == "Spotify":
             pval = f"{compareid: <30}"
@@ -175,7 +199,7 @@ class PanDBMatch:
         return quality
                     
 
-    def select(self, minQual=3, maxQual=None, minName=1, show=True):
+    def select(self, minQual=3, maxQual=None, minName=1, maxName=None, show=True):
         def getHash(baseid, comparedb, compareid):
             m = md5()
             m.update(baseid.encode())
@@ -184,6 +208,7 @@ class PanDBMatch:
             return m.hexdigest()[:10]
         
         maxQual = maxQual if isinstance(maxQual, int) else self.maxQual
+        maxName = maxName if isinstance(maxName, int) else self.maxQual
         
         matches = {}
         for baseid,baseresult in self.singleFinalResults["Single"].groupby(level=0):
@@ -197,7 +222,7 @@ class PanDBMatch:
                         continue
                     cname = self.crossMatchNames[(baseid,comparedb,compareid)]
                     nameQuality  = result.get("NameQuality", self.getNameQuality(name, cname))
-                    if (qual == 1 and nameQuality < 4) or (nameQuality < minName):
+                    if (qual == 1 and nameQuality < 4) or (nameQuality < minName) or (nameQuality >= maxName):
                         continue
                     idval = baseid if first is True else " "
                     first = False
@@ -214,7 +239,7 @@ class PanDBMatch:
                             continue
                         cname = self.crossMatchNames[(baseid,comparedb,compareid)]
                         nameQuality  = value.get("NameQuality", self.getNameQuality(name, cname))
-                        if (qual == 1 and nameQuality < 4) or (nameQuality < minName):
+                        if (qual == 1 and nameQuality < 4) or (nameQuality < minName) or (nameQuality >= maxName):
                             continue
                         hval  = getHash(baseid, comparedb, compareid)
                         assert self.hashmap.get(hval) is None, "OMG! Found a duplicate hash"
@@ -403,12 +428,13 @@ class PanDBMatch:
             io = FileIO()
             mdbpd = MusicDBPermDir()
             multiMasterIndexData = {baseid: {"Data": self.masterResultData[baseid], "Rows": self.pdbio.getRows(masteridxs)} for baseid,masteridxs in self.multiMasterIndex.iteritems()}
-            savename = mdbpd.getMatchPermPath().join("multiMatch.p")
-            io.save(idata = multiMasterIndexData, ifile = savename)
-            print("  ==> Saving [{0}] Multi Match Artists' Data To {1}".format(len(multiMasterIndexData), savename.str))
+            io.save(idata = multiMasterIndexData, ifile = self.multiMatchFilename)
+            print("  ==> Saving [{0}] Multi Match Artists' Data To {1}".format(len(multiMasterIndexData), self.multiMatchFilename.str))
                     
         
     def mergeMultiRows(self):
+        io = FileIO()
+        multiMasterIndexData = io.get(self.multiMatchFilename)
         dbs = MasterDBs().getDBs()
         if len(self.multiMasterIndex) > 0:
             nMerged = 0
@@ -428,11 +454,19 @@ class PanDBMatch:
                     print(pandbData.drop(dbs, axis=1).to_string())
                     self.pdbio.mergeRows(*(pandbData.index))
                     nMerged += 1
+                    try:
+                        del multiMasterIndexData[baseid]
+                    except:
+                        print(f"Could not delete {baseid} from multi data")
                 else:
                     print("Could not merge rows due to multiple IDs for a db")
                 print('-'*150)
 
             if nMerged > 0:
                 self.pdbio.saveData()
+                print(f"Saving {len(multiMasterIndexData)} Multi PanDBID Matches")
+                io.save(idata = multiMasterIndexData, ifile = self.multiMatchFilename)
         else:
             print("Nothing to merge")
+            
+        

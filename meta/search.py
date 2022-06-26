@@ -3,7 +3,7 @@
 __all__ = ["SearchData", "MusicDBIgnoreData"]
 
 from base import MusicDBBaseData, MusicDBDir, MusicDBData
-from master import MasterParams, MusicDBPermDir
+from master import MasterParams, MusicDBPermDir, MasterMetas
 from timeutils import Timestat
 from fileutils import DirInfo,FileInfo
 from ioutils import FileIO
@@ -17,8 +17,9 @@ class SearchData(SummaryDataBase):
         
 
     def isSearchable(self, counts):
-        reqMedia  = counts["Album"] >= 2 or counts["SingleEP"] >= 2
         reqName   = isinstance(counts["Name"],str) and len(counts["Name"]) > 0
+        reqMedia  = counts.drop("Name").max() >= 1
+        #reqMedia  = counts["Album"] >= 2 or counts["SingleEP"] >= 2
         retval    = reqMedia and reqName
         return retval
     
@@ -55,6 +56,12 @@ class SearchData(SummaryDataBase):
         else:
             raise ValueError("Can not make {0} uppercase".format(value))
         return retval
+    
+    def testDuplicated(self, df):
+        dupls = df[df.index.duplicated()]
+        if dupls.shape[0] > 0:
+            raise ValueError(f"Found duplicated indices in metadata: {dupls.index}")
+
         
     ###########################################################################################################################################################
     # Artist ID => Name/URL Map
@@ -63,19 +70,24 @@ class SearchData(SummaryDataBase):
         verbose = kwargs.get('verbose', self.verbose)
         if verbose: ts = Timestat("Making {0} Search Data".format(self.db))
             
-        self.medias = {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
+        # {"A": "Album", "B": "SingleEP", "C": "Appearance", "D": "Technical", "E": "Mix", "F": "Bootleg", "G": "AltMedia", "H": "Other"}
+        # medias = list(MasterMeta().getMedias().values())
         
         omit = self.mdbdata.getOmitData()
         omit.loadIDs()
         if self.verbose: print("  ==> Found {0} IDs To Ignore".format(len(self.omit.omit)))
 
         artistCountsData  = self.mdbdata.getSummaryCountsData().join(self.mdbdata.getSummaryNameData())
+        self.testDuplicated(artistCountsData)
         searchableResults = artistCountsData.apply(self.isSearchable, axis=1)
         
         for key in self.searchTypes:
             summaryData    = eval("self.mdbdata.getSummary{0}Data()".format(key))
             if isinstance(summaryData,(DataFrame,Series)):
-                searchableData = summaryData.loc[searchableResults]
+                try:
+                    searchableData = summaryData.loc[searchableResults]
+                except:
+                    raise ValueError(f"Could not select searchable data for {key} using results {len(searchableResults)} ({searchableResults.head()})")                    
                 searchData     = searchableData.apply(self.makeSearchable)
                 searchData     = searchData[searchData.index.map(omit.isValid)]
                 searchData.name = key

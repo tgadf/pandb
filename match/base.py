@@ -5,6 +5,7 @@ __all__ = ["MatchDBBase"]
 from .params import MatchDBParams
 from .utils import printIntro, write
 from .pool import poolMatchAlbums
+from .results import MatchQualityNames
 from pandas import DataFrame, Series, concat
 from typing import Union
 
@@ -20,6 +21,7 @@ class MatchDBBase:
         self.getDBReq = self.params.getDBReq
         self.getMatchNameReq = self.params.getMatchNameReq
         self.getPart = self.params.getPart
+        self.mqnames = MatchQualityNames()
         
 
     ################################################################################################################################################
@@ -45,7 +47,7 @@ class MatchDBBase:
         albumMatchResults = poolMatchAlbums(mediaData, verbose=True)
         
         mediaResults = {}
-        rankValues   = {"Loose": 0.7, "Medium": 0.8, "Tight": 0.9, "Exact": 0.95}
+        #rankValues   = {"Loose": 0.7, "Medium": 0.8, "Tight": 0.9, "Exact": 0.95}
         for baseID,compareResults in albumMatchResults.groupby(level=0):
             mediaResults[baseID] = {}
             for (_,compareID),compareIDResult in compareResults.iteritems():
@@ -54,8 +56,8 @@ class MatchDBBase:
                 bestBaseMatch    = Series(df.max(axis=0).values, index=mediaData[key]["Compare"])
                 bestCompareMatch = Series(df.max(axis=1).values, index=mediaData[key]["Base"])
 
-                baseRankResult = {rank: bestBaseMatch[bestBaseMatch >= value].count() for rank,value in rankValues.items()}
-                compareRankResult = {rank: bestCompareMatch[bestCompareMatch >= value].count() for rank,value in rankValues.items()}
+                baseRankResult = {rank: bestBaseMatch[bestBaseMatch >= value].count() for rank,value in self.mqnames.mediaMatchValues.items()}
+                compareRankResult = {rank: bestCompareMatch[bestCompareMatch >= value].count() for rank,value in self.mqnames.mediaMatchValues.items()}
 
                 rankData = concat([Series(baseRankResult, name="Base"), Series(compareRankResult, name="Compare")], axis=1)
 
