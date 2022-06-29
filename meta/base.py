@@ -172,3 +172,8 @@ class MetaDataUtilsBase:
         media = self.getMediaData(rData, {})
         retval = {mediaType: list({release.code: release.album for release in mediaTypeData[:maxNum]}.values()) for mediaType,mediaTypeData in media.items()}
         return retval
+    
+    def getMediaFormats(self, rData):
+        media = self.getMediaData(rData, {})
+        retval = {mediaType: {release.code: release.aformat for release in mediaTypeData}.values() for mediaType,mediaTypeData in media.items()}
+        return retval

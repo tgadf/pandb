@@ -5,3 +5,4 @@ from .parserawdata import ParseRawData
 from .utils import *
 from .metadata import *
 from .searchomit import *
+from .relationships import *

@@ -52,5 +52,5 @@ class UniversalMetaData:
         artistMediaDates = modValData.apply(self.utils.getMediaDates).apply(getMediaDateStats)
         
         metaData = artistMediaDates.apply(Series)
-        metaData.columns = ["MinDate", "MaxYear", "MedianYear"]
+        metaData.columns = ["MinYear", "MaxYear", "MedianYear"]
         return metaData

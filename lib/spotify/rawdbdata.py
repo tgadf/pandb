@@ -3,6 +3,7 @@
 __all__ = ["RawDBData"]
 
 from base import RawDataBase
+from pandas import to_datetime
 from .musicdbid import MusicDBID
 
 class RawDBData(RawDataBase):
@@ -74,7 +75,7 @@ class RawDBData(RawDataBase):
             albumTracks  = albumData.get('numtracks')                
             albumDate    = albumData.get('date')
             try:
-                albumYear    = to_datetime(albumDate).year if albumDate is not None else None
+                albumYear    = to_datetime(albumDate).year
             except:
                 albumYear    = None
 

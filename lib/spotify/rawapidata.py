@@ -23,6 +23,23 @@ class RawAPIData(APIIO):
         if debug:
             print("{0} API(Key={1})".format(self.name, self.apikey))
 
+            
+    #########################################################################################################################################
+    # Artist Related Artists Info
+    #########################################################################################################################################
+    def getArtistIDRelatedResults(self, artistID, artistName):
+        print("Searching For {0: <50}".format("{0} ({1})".format(artistName,artistID)), end="")
+        self.sleep(0.25)
+        try:
+            result = self.sp.artist_related_artists(artistID)
+        except:
+            print("==> Error in Spotify ArtistID Lookup for {0}".format(artistID))
+            return None
+        retval  = result
+        #[spotifyArtistRecord(result).get()]
+        #print(len(retval))
+        return retval
+            
         
     #########################################################################################################################################
     # Artist Info

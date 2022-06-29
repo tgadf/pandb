@@ -62,7 +62,10 @@ class MetaData(MetaDataBase):
         artistType = modValData.apply(self.utils.getType)
         artistType.name = "Type"
         
-        metaData = DataFrame(artistType)
+        artistMediaArtists = modValData.apply(self.utils.getMediaArtists)
+        artistMediaArtists.name = "MediaArtists"
+        
+        metaData = DataFrame([artistType,artistMediaArtists]).T
         return metaData
         
                     
@@ -126,4 +129,10 @@ class SpotifyMetaDataUtils(MetaDataUtilsBase):
     def getMedia(self, rData):
         media = self.getMediaData(rData, {})
         retval = {mediaType: list({release.code: release.album for release in mediaTypeData}.values()) for mediaType,mediaTypeData in media.items()}
+        return retval
+
+    def getMediaArtists(self, rData):
+        media = self.getMediaData(rData, {})
+        mediaArtists = [record.artist for mediaType,mediaTypeData in media.items() for record in mediaTypeData]
+        retval = {artistID: artistName for record in mediaArtists for artistID,artistName in record.items()}
         return retval
