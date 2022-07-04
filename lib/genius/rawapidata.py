@@ -12,7 +12,7 @@ class RawAPIData(APIIO):
         client_access_token = "lllWDHXkTwmxqpZCPyAA8EwX4pilPXKf7x4E_PKNDfMtiwtXvfahmVYL6WSb2mlQ"
         self.apikey = client_access_token
 
-        self.baseURL = "http://api.genius.com"
+        self.baseURL = "https://api.genius.com"
         self.format  = "json"
         self.options = {"per_page": "50"}
         self.debug   = debug
@@ -63,7 +63,7 @@ class RawAPIData(APIIO):
 
 
     ##################################################################################################################################################################
-    # Artist Info
+    # Artist Songs Info
     ##################################################################################################################################################################
     def getArtistSongsURL(self, artist_id, page, per_page=50):
         #genius_artist_songs_url = f"http://api.genius.com/artists/{artist_id}/songs?per_page={per_page}?&page={page}&access_token={client_access_token}"
@@ -95,9 +95,24 @@ class RawAPIData(APIIO):
                 #print("{0}".format(len(searchResults)), end="")
                 print(".", end="")
         print(" {0}".format(len(searchResults)))
-
+        
         albums = [geniusAlbumsRecord(album).get() for album in searchResults]
         retval = {'artistID': artistID, 'albums': albums}
+        return retval
+
+
+    ##################################################################################################################################################################
+    # Aritst Song Info
+    ##################################################################################################################################################################
+    def getArtistSongURL(self, song_id):
+        return f"{self.baseURL}/songs/{song_id}?access_token={self.apikey}"
+        
+    def getArtistSong(self, artistName, songName, songID):
+        print("Getting Song Infor For {0: <75}\t".format("{0} / {1} ({2})".format(artistName, songName,artistID)), end="")
+        requestResult  = self.getResponse(self.get(self.getArtistSongURL(song_id)))
+        print(" {0}".format(len(searchResults) > 0))
+        
+        retval = GeniusSongRecord(requestResult).get()
         return retval
     
     
@@ -148,5 +163,83 @@ class geniusAlbumsRecord:
             primaryArtist    = item.get('primary_artist', {})
             self.artist      = geniusPrimaryArtist(primaryArtist).get()
         
+    def get(self):
+        return self.__dict__
+    
+    
+class GeniusSongRecord:
+    def __init__(self, item):
+        if isinstance(item, dict):
+            self.api_path       = item.get('api_path')
+            self.apple_id       = item.get('apple_music_id')
+            self.artistNames    = item.get('artist_names')
+            self.description    = item.get('description')
+            self.full_title     = item.get('full_title')
+            self.id             = item.get('id')
+            self.lyrics_id      = item.get('lyrics_owner_id')
+            self.path           = item.get('path')
+            self.pyongs_cnt     = item.get('pyongs_count')
+            self.release_date   = item.get('release_date')
+            self.title          = item.get('title')
+            self.title_featured = item.get('title_with_featured')
+            self.url            = item.get('url')
+            self.album          = GeniusAlbumRecord(item.get('album', {})).get()
+            self.performers     = [GeniusPerformersRecord(performer).get() for performer in item.get('custom_performances', [])]
+            self.media          = [GeniusMediaRecord(media).get() for media in item.get('media', [])]
+            self.artist         = GeniusArtistRecord(item.get('primary_artist', {})).get()
+            self.featured       = [GeniusArtistRecord(featured).get() for featured in item.get('featured_artists', [])]
+            self.producers      = [GeniusArtistRecord(producer).get() for producer in item.get('producer_artists', [])]
+            self.writers        = [GeniusArtistRecord(writer).get() for writer in item.get('writer_artists', [])]
+
+    def get(self):
+        return self.__dict__
+    
+    
+class GeniusAlbumRecord:
+    def __init__(self, item):
+        if isinstance(item, dict):
+            self.api_path       = item.get('api_path')
+            self.full_title     = item.get('full_title')
+            self.id             = item.get('id')
+            self.name           = item.get('name')
+            self.url            = item.get('url')
+            self.artist         = GeniusArtistRecord(item.get('artist', {})).get()
+            
+    def get(self):
+        return self.__dict__
+
+    
+class GeniusPerformersRecord:
+    def __init__(self, item):
+        if isinstance(item, dict):
+            self.label   = item.get('label')
+            self.artists = [GeniusArtistRecord(artist).get() for artist in item.get('artists', [])]
+            
+    def get(self):
+        return self.__dict__
+
+    
+class GeniusArtistRecord:
+    def __init__(self, item):
+        if isinstance(item, dict):
+            self.api_path       = item.get('api_path')
+            self.id             = item.get('id')
+            self.name           = item.get('name')
+            self.url            = item.get('url')
+            self.iq             = item.get('iq')
+            
+    def get(self):
+        return self.__dict__
+    
+    
+class GeniusMediaRecord:
+    def __init__(self, item):
+        if isinstance(item, dict):
+            self.provider    = item.get('provider')
+            self.type        = item.get('type')
+            self.attribution = item.get('attribution')
+            self.url         = item.get('url')
+            self.uri         = item.get('native_uri')
+            
     def get(self):
         return self.__dict__

@@ -7,6 +7,10 @@ from base import MusicDBBaseData, MusicDBBaseDirs
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
+from fileutils import FileInfo, DirInfo
+import tarfile
+from shutil import rmtree
+from ioutils import FileIO
 
 from .rawdbdata import RawDBData
 from .musicdbid import MusicDBID
@@ -20,7 +24,7 @@ class ParseRawData:
             raise ValueError("ParseRawData(mdbdir) is not of type MusicDBBaseDirs")
         self.rawio     = RawDBData()
         self.prdutils  = ParseRawDataUtils(mdbdata, mdbdir, self.rawio, **kwargs)
-        self.fileTypes = ["Artist", "Album"]
+        self.fileTypes = ["Artist", "Album", "Master"]
         self.verbose   = kwargs.get('debug', kwargs.get('verbose', False))
         self.db        = mdbdir.db
         self.rawio     = RawDBData()
@@ -32,6 +36,7 @@ class ParseRawData:
     def parse(self, modVal, expr='< 0 Days', force=False):
         self.parseArtistData(modVal, expr, force)
         self.parseAlbumData(modVal, expr, force)
+        self.parseMasterData(modVal, expr, force)
 
         
     #####################################################################################################################
@@ -114,6 +119,91 @@ class ParseRawData:
                     newData += 1
                 else:
                     self.badData[ifile] = True
+            if self.verbose: tsParse.stop()
+
+            if newData > 0:
+                if self.verbose: print("  ===> Saving [{0}/{1}/{2}] {3} Entries".format(newData, len(modValData), len(self.badData), "DB Data"))
+                self.prdutils.saveFileTypeModValData(modVal, fileType, modValData)
+            else:
+                if self.verbose: print("  ===> Did not find any new data from {0} files".format(N))
+                
+        
+        if self.verbose: ts.stop()       
+            
+            
+
+        
+    #####################################################################################################################
+    # Parse Master Data
+    #####################################################################################################################
+    def parseMasterData(self, modVal, expr='< 0 Days', force=False):
+        fileType = "Master"
+        if self.verbose: ts = Timestat("Parsing ModVal={0} Raw {1} {2} Files(expr=\'{3}\', force={4})".format(modVal, fileType, self.db, expr, force))
+                
+                
+        ############################################
+        # New Files Since Last ModValData Update
+        ############################################
+        newFiles = self.prdutils.getNewFiles(modVal, fileType=fileType, expr=expr, force=force)
+        io = FileIO()
+        
+        N = len(newFiles)
+        if N > 0:
+            ############################################
+            # Current ModValData
+            ############################################
+            modValData = self.prdutils.getFileTypeModValData(modVal, fileType, force)
+            if self.verbose: print("  ===> Found {0} Previously Saved {1} ModVal Data Entries".format(len(modValData), fileType))
+
+            ############################################
+            # Loop Over Files And Save Results
+            ############################################
+            newData = 0
+            if self.verbose: tsParse = Timestat("Parsing {0} New {1} Files".format(N, fileType))
+            pModVal = self.prdutils.getPrintModValue(N)
+            for i,ifile in enumerate(newFiles):
+                if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
+                    if self.verbose: tsParse.update(n=i+1, N=N)
+
+                finfo = FileInfo(ifile)
+                if finfo.ext == ".tar":
+                    tarExtractDir = DirInfo(finfo.parent).join("tarfileData")
+                    if tarExtractDir.exists():
+                        rmtree(tarExtractDir.path)                        
+                    tarExtractDir.mkDir(debug=False)
+    
+                    tar = tarfile.open(ifile)
+                    masterFiles = [tarExtractDir.join(member.name) for member in tar.getmembers()]
+                    tar.extractall(path=tarExtractDir.path)
+                    tar.close()
+                else:
+                    print(f"File [{ifile}] is not a tar file")
+                    continue
+                
+                for mfile in masterFiles:
+                    finfo = FileInfo(mfile)
+                    artistID,masterID = finfo.basename.split("-")
+                    artistID = str(artistID)
+                    masterID = str(masterID)
+
+                    cmd = "self.rawio.get{0}Data(mfile)".format(fileType)
+                    try:
+                        mData = eval(cmd)
+                    except:
+                        self.badData[ifile] = True
+                        continue
+                        
+                    if isinstance(mData.code, str):
+                        if modValData.get(artistID) is None:
+                            modValData[artistID] = {}
+                        modValData[artistID][masterID] = mData
+                        newData += 1
+                    else:
+                        self.badData[ifile] = True
+                        continue
+                        
+
+                rmtree(tarExtractDir.path)
             if self.verbose: tsParse.stop()
 
             if newData > 0:

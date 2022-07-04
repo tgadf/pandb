@@ -6,6 +6,7 @@ from base import MusicDBBaseData, MusicDBBaseDirs
 from fileutils import RecentFiles
 from timeutils import Timestat
 from pandas import Series
+import tarfile
         
 #########################################################################################################
 # Parse Raw Data Utils
@@ -112,7 +113,14 @@ class ParseRawDataUtils:
         elif N > 250:
             base = 100
         return base
-            
+
+    
+    ##########################################################################################
+    # Extract Tar File And Report Contents
+    ##########################################################################################
+    def extractTarfile(self, ifile):
+        x =1
+        #cmd = 'self.mdbdir.getRaw{0}ModValDataDir({1}).glob("*.*", debug=False)'.format(fileTypeFunc, modVal)
         
     ##########################################################################################
     # Merging Utils

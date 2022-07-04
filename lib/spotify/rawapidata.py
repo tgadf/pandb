@@ -35,6 +35,12 @@ class RawAPIData(APIIO):
         except:
             print("==> Error in Spotify ArtistID Lookup for {0}".format(artistID))
             return None
+        
+        
+        artists = result.get('artists', []) if isinstance(result,dict) else []
+        retval  = [spotifyArtistRecord(item).get() for item in artists]
+        print(len(retval))
+        return retval        
         retval  = result
         #[spotifyArtistRecord(result).get()]
         #print(len(retval))

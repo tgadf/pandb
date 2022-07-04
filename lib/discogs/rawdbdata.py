@@ -4,6 +4,7 @@ __all__ = ["RawDBData"]
 
 from base import RawDataBase
 from .musicdbid import MusicDBID
+from .rawapidata import DiscogsReleaseData
 from pathlib import PosixPath
 
 class RawDBData(RawDataBase):
@@ -11,6 +12,16 @@ class RawDBData(RawDataBase):
         super().__init__()
         self.aid = MusicDBID()
         
+        
+    ##############################################################################################################################
+    ## Parse Master Release Data
+    ##############################################################################################################################
+    def getMasterData(self, inputdata):
+        self.getPickledData(inputdata)
+        drd  = DiscogsReleaseData(self.bsdata)
+        amdc = self.makeRawMediaReleaseData(album=drd.title, url=drd.url, artist={"Primary": drd.artists, "Extra": drd.extraArtists}, code=str(drd.id), aformat={"Genres": drd.genres, "Styles": drd.styles, "Release": drd.main, "NumTracks": drd.numTracks}, aclass=None, year=drd.year)
+        return amdc
+
         
     ##############################################################################################################################
     ## Parse Artist Data

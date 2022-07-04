@@ -15,6 +15,7 @@ class MusicDBIO(MusicDBIOBase):
         self.getModVal = self.mv.get
         self.prd       = ParseRawData(self.data, self.dir, **kwargs)
         self.meta      = MetaData(self.data, **kwargs)
+        mkDirs         = kwargs.get('mkDirs', False)
 
         ############################################################
         # Omit Data
@@ -24,18 +25,35 @@ class MusicDBIO(MusicDBIOBase):
         ############################################################
         # DB-specific Dir
         ############################################################
-        self.dir.addDir("RawAlbumModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child="albums"))        
-        self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))    
-        self.dir.addDir("ModValArtist", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="artist"))
-        self.dir.getMusicDBDir("ModValArtist").mkDir()
-        self.dir.addDir("ModValAlbum", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="album"))
-        self.dir.getMusicDBDir("ModValAlbum").mkDir()
+        self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))
+        
+        dType = "Artist"
+        self.dir.addDir(f"ModVal{dType}", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child=f"{dType.lower()}"))
+        if mkDirs: self.dir.getMusicDBDir(f"ModVal{dType}").mkDir()
+        
+        dType = "Song"
+        self.dir.addDir(f"Raw{dType}ModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child=f"{dType.lower()}s"))
+        self.dir.addDir(f"ModVal{dType}", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child=f"{dType.lower()}"))
+        if mkDirs: self.dir.getMusicDBDir(f"ModVal{dType}").mkDir()
+        
+        dType = "Album"
+        self.dir.addDir(f"Raw{dType}ModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child=f"{dType.lower()}s"))
+        self.dir.addDir(f"ModVal{dType}", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child=f"{dType.lower()}"))
+        if mkDirs: self.dir.getMusicDBDir(f"ModVal{dType}").mkDir()
         
         ############################################################
         # DB-specific Data
         ############################################################
         self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="geniusArtistsData"))
-        self.data.addData("RawArtistInfo", MusicDBData(path=self.dir.getMusicDBDir("RawModVal"), arg=True), fname=True)
-        self.data.addData("RawArtistAlbum", MusicDBData(path=self.dir.getMusicDBDir("RawAlbumModVal"), arg=True), fname=True)
-        self.data.addData("ModValArtist", MusicDBData(path=self.dir.getMusicDBDir("ModValArtist"), arg=True, suffix="DB"), fname=True)
-        self.data.addData("ModValAlbum", MusicDBData(path=self.dir.getMusicDBDir("ModValAlbum"), arg=True, suffix="DB"), fname=True)
+        
+        dType = 'Artist'
+        self.data.addData(f"RawArtistInfo", MusicDBData(path=self.dir.getMusicDBDir(f"RawModVal"), arg=True), fname=True)
+        self.data.addData(f"ModVal{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"ModVal{dType}"), arg=True, suffix="DB"), fname=True)
+        
+        dType = 'Song'
+        self.data.addData(f"RawArtist{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"Raw{dType}ModVal"), arg=True), fname=True)
+        self.data.addData(f"ModVal{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"ModVal{dType}"), arg=True, suffix="DB"), fname=True)
+        
+        dType = 'Album'
+        self.data.addData(f"RawArtist{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"Raw{dType}ModVal"), arg=True), fname=True)
+        self.data.addData(f"ModVal{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"ModVal{dType}"), arg=True, suffix="DB"), fname=True)

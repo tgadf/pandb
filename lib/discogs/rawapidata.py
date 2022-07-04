@@ -1,6 +1,6 @@
 """ Raw Discogs Data I/O """
 
-__all__ = ["RawAPIData"]
+__all__ = ["RawAPIData", "DiscogsReleaseData"]
 
 from apiutils import APIIO
 
@@ -90,5 +90,23 @@ class discogsRelease:
         
         self.main_release = item.get('main_release')
         
+    def get(self):
+        return self.__dict__
+    
+    
+class DiscogsReleaseData:
+    def __init__(self, release):
+        assert isinstance(release,dict), f"You didn't pass a dict, but a {type(release)}"
+        self.id           = release.get('id')
+        self.main         = release.get('main_release')
+        self.url          = release.get("resource_url")
+        self.genres       = release.get('genres', [])
+        self.styles       = release.get('styles', [])
+        self.year         = release.get('year')
+        self.title        = release.get('title')
+        self.artists      = {artist["id"]: artist["name"] for artist in release.get('artists', [])}
+        self.extraArtists = {artist["id"]: artist["name"] for trk in release.get('tracklist', []) for artist in trk.get('extraartists', [])}
+        self.numTracks    = len(release.get('tracklist', []))
+    
     def get(self):
         return self.__dict__

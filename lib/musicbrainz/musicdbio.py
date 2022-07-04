@@ -15,6 +15,7 @@ class MusicDBIO(MusicDBIOBase):
         self.getModVal = self.mv.get
         self.prd       = ParseRawData(self.data, self.dir, **kwargs)
         self.meta      = MetaData(self.data, **kwargs)
+        mkDirs         = kwargs.get('mkDirs', False)
 
         ############################################################
         # Omit Data
@@ -30,7 +31,7 @@ class MusicDBIO(MusicDBIOBase):
             key    = "ModVal{0}".format(fileType)
             mdbdir = MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child="{0}".format(fileType.lower()))
             self.dir.addDir(key, mdbdir)
-            mdbdir.mkDir()
+            if mkDirs: mdbdir.mkDir()
             #self.dir.getMusicDBDir("ModVal{0}".format(fileType)).mkDir()
         
         ############################################################
