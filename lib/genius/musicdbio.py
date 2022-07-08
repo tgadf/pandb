@@ -28,6 +28,7 @@ class MusicDBIO(MusicDBIOBase):
         self.dir.addDir("RawSearch", MusicDBDir(path=self.dir.getMusicDBDir("Raw"), child="search"))
         
         dType = "Artist"
+        self.dir.addDir(f"Raw{dType}ModVal", MusicDBDir(path=self.dir.getMusicDBDir("RawModVal"), child=f"{dType.lower()}s"))
         self.dir.addDir(f"ModVal{dType}", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child=f"{dType.lower()}"))
         if mkDirs: self.dir.getMusicDBDir(f"ModVal{dType}").mkDir()
         
@@ -41,13 +42,14 @@ class MusicDBIO(MusicDBIOBase):
         self.dir.addDir(f"ModVal{dType}", MusicDBDir(path=self.dir.getMusicDBDir("ModVal"), child=f"{dType.lower()}"))
         if mkDirs: self.dir.getMusicDBDir(f"ModVal{dType}").mkDir()
         
+        
         ############################################################
         # DB-specific Data
         ############################################################
         self.data.addData("SearchArtist", MusicDBData(path=self.dir.getMusicDBDir("RawSearch"), fname="geniusArtistsData"))
         
         dType = 'Artist'
-        self.data.addData(f"RawArtistInfo", MusicDBData(path=self.dir.getMusicDBDir(f"RawModVal"), arg=True), fname=True)
+        self.data.addData(f"RawArtist", MusicDBData(path=self.dir.getMusicDBDir(f"Raw{dType}ModVal"), arg=True), fname=True)
         self.data.addData(f"ModVal{dType}", MusicDBData(path=self.dir.getMusicDBDir(f"ModVal{dType}"), arg=True, suffix="DB"), fname=True)
         
         dType = 'Song'

@@ -25,7 +25,9 @@ class MusicDBID:
         #    self.aid = eval("dbArtistIDSelf()")
         self.aid = None
         self.amv = MusicDBIDModVal()
-        self.getModVal = self.amv.getModVal
+        self.getModVal  = self.amv.get
+        self.getGlobVal = self.amv.getGlobVal
+        
 
     def getid(self, value):
         return self.aid.getArtistID(value)

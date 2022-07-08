@@ -7,6 +7,7 @@ from base import MusicDBBaseData, MusicDBBaseDirs
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
+from ioutils import FileIO
 from .rawdbdata import RawDBData
 
         
@@ -18,7 +19,7 @@ class ParseRawData:
             raise ValueError("ParseRawData(mdbdir) is not of type MusicDBBaseDirs")
         self.rawio     = RawDBData()
         self.prdutils  = ParseRawDataUtils(mdbdata, mdbdir, self.rawio, **kwargs)
-        self.fileTypes = ["Artist", "Album"]
+        self.fileTypes = ["Artist", "Album", "Song"]
         self.verbose   = kwargs.get('debug', kwargs.get('verbose', False))
         self.db        = mdbdir.db
         self.rawio     = RawDBData()
@@ -50,6 +51,7 @@ class ParseRawData:
         ############################################
         # New Files Since Last ModValData Update
         ############################################
+        io = FileIO()
         newFiles = self.prdutils.getNewFiles(modVal, fileType, expr, force)
             
         N = len(newFiles)
@@ -70,16 +72,20 @@ class ParseRawData:
             for i,ifile in enumerate(newFiles):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
-                cmd = "self.rawio.get{0}Data(ifile)".format(fileType)
-                try:
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd = "self.rawio.get{0}Data(fdata)".format(fileType)
                     rData = eval(cmd)
-                except:
-                    print("Could not call {0}".format(cmd))
-                if isinstance(rData.ID.ID, str):
-                    modValData[rData.ID.ID] = rData
-                    newData += 1
-                else:
-                    badData += 1
+                    try:
+                        rData = eval(cmd)
+                    except:
+                        print("Could not call {0}".format(cmd))
+                    if isinstance(rData.ID.ID, str):
+                        modValData[rData.ID.ID] = rData
+                        newData += 1
+                    else:
+                        badData += 1
             if self.verbose: tsParse.stop()
 
             if newData > 0:

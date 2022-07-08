@@ -93,7 +93,7 @@ class RawAPIData(APIIO):
     def getArtistSearch(self, artistName):
         print("Searching For {0: <50}".format(artistName), end="")
         searchResults  = []
-        requestResult  = self.get(self.getArtistSearch(artistName))
+        requestResult  = self.get(self.getArtistSearchURL(artistName))
         if requestResult is None:
             return None
         totalResults   = requestResult.get('total', -1)
@@ -118,10 +118,116 @@ class RawAPIData(APIIO):
         return searchResults
     
     
+    #############################################################################################################################
+    # Albums Data URL
+    #############################################################################################################################
+
+    #############################################################################################################################
+    # Albums Data
+    #############################################################################################################################
+    def getAlbumURL(self, albumID):
+        return f"{self.baseURL}/album/{albumID}"
+
+    def getAlbumData(self, artistName, albumID, albumName):
+        print("Searching For {0: <100}".format(f"{artistName} / {albumName} ({albumID})"), end="")
+        searchResults  = []
+        requestResult  = self.get(self.getAlbumURL(albumID))        
+        retval         = DeezerAlbumData(requestResult).get()
+        retvalID       = retval.get('id', 'ERROR')
+        
+        print(f" {retvalID}")
+        return retval
+    
+    
     
 ##################################################################################################################################################################
 # API Data Classes
 ##################################################################################################################################################################
+class DeezerContributorData:
+    def __init__(self, record):
+        if isinstance(record, dict):
+            self.id   = record.get('id')
+            self.name = record.get('name')
+            self.type = record.get('type')
+            self.role = record.get('role')
+            
+    def get(self):
+        return self.__dict__
+    
+    
+class DeezerAlbumArtistData:
+    def __init__(self, record):
+        if isinstance(record, dict):
+            self.id   = record.get('id')
+            self.name = record.get('name')
+            self.type = record.get('type')
+            
+    def get(self):
+        return self.__dict__
+    
+    
+class DeezerAlbumGenreData:
+    def __init__(self, record):
+        if isinstance(record, dict):
+            self.id   = record.get('id')
+            self.name = record.get('name')
+            
+    def get(self):
+        return self.__dict__
+
+
+class DeezerAlbumTrackData:
+    def __init__(self, record):
+        if isinstance(record, dict):
+            self.id         = record.get('id')
+            self.title      = record.get('title')
+            self.titleShort = record.get('title_short')
+            self.type       = record.get('type')
+            self.url        = record.get('link')
+            self.rank       = record.get('rank')
+            
+            artist = record.get('artist', {})
+            self.artist = DeezerAlbumArtistData(artist).get()
+            
+            album = record.get('album', {})
+            self.album = {album['id']: album['title']}
+            
+    def get(self):
+        return self.__dict__
+    
+    
+class DeezerAlbumData:
+    def __init__(self, record):
+        if isinstance(record, dict):
+            self.id         = record.get('id')
+            self.title      = record.get('title')
+            self.upc        = record.get('upc')
+            self.url        = record.get('link')
+            self.type       = record.get('type')            
+            self.label      = record.get('label')
+            self.numTracks  = record.get('nb_tracks')
+            self.duration   = record.get('duration')
+            self.fans       = record.get('fans')
+            self.date       = record.get('release_date')
+            self.recordType = record.get('record_type')
+            self.tracks     = record.get('tracklist')
+                        
+            genres = record.get('genres', {}).get('data', [])
+            self.genres = [DeezerAlbumGenreData(genre).get() for genre in genres]
+            
+            contributors = record.get('contributors', [])
+            self.contributors = [DeezerContributorData(contributor).get() for contributor in contributors]
+                                                                          
+            artist = record.get('artist', {})
+            self.artist = DeezerAlbumArtistData(artist).get()
+            
+            tracks = record.get('tracks', {}).get('data', [])
+            self.tracks = [DeezerAlbumTrackData(track).get() for track in tracks]
+            
+    def get(self):
+        return self.__dict__
+
+
 class deezerTrack:
     def __init__(self, item):
         self.id        = item.get('id')

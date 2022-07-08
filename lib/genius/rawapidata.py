@@ -70,7 +70,7 @@ class RawAPIData(APIIO):
         return "{0}/artists/{1}/songs?per_page={2}&page={3}&access_token={4}".format(self.baseURL, artist_id, self.options["per_page"], page, self.apikey)
         #return genius_artist_songs_url    
         
-    def getArtistSongs(self, artistName, artistID):
+    def getArtistSongsData(self, artistName, artistID):
         print("Searching For Songs For {0: <50}\t".format("{0} ({1})".format(artistName,artistID)), end="")
         searchResults  = []
         page           = 1
@@ -107,12 +107,14 @@ class RawAPIData(APIIO):
     def getArtistSongURL(self, song_id):
         return f"{self.baseURL}/songs/{song_id}?access_token={self.apikey}"
         
-    def getArtistSong(self, artistName, songName, songID):
-        print("Getting Song Infor For {0: <75}\t".format("{0} / {1} ({2})".format(artistName, songName,artistID)), end="")
-        requestResult  = self.getResponse(self.get(self.getArtistSongURL(song_id)))
-        print(" {0}".format(len(searchResults) > 0))
+    def getArtistSongData(self, artistName, songName, songID):
+        print("Getting Song Info For {0: <100}\t".format("{0} / {1} ({2})".format(artistName, songName, songID)), end="")
+        url = self.getArtistSongURL(songID)
+        requestResult  = self.getResponse(self.get(url))
+        songData       = requestResult.get('song', {}) if isinstance(requestResult, dict) else {}
+        print(" {0}".format(len(songData) > 0))
         
-        retval = GeniusSongRecord(requestResult).get()
+        retval = GeniusSongRecord(songData).get()
         return retval
     
     

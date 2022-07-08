@@ -31,7 +31,7 @@ class RawDBData(RawDataBase):
     ## Parse Artist Data
     ##############################################################################################################################
     def getArtistData(self, inputdata):
-        self.getPickledData(inputdata)
+        self.getDictData(inputdata)
         self.assertData()
         geniusArtistData  = self.bsdata.get('artist', {})
         artistAliases     = geniusArtistData.get('alternate_names')
@@ -105,7 +105,7 @@ class RawDBData(RawDataBase):
     ## Parse Albums Data
     ##############################################################################################################################
     def getAlbumData(self, inputdata):
-        self.getPickledData(inputdata)
+        self.getDictData(inputdata)
         self.assertData()
         
         artistAlbums = self.bsdata.get("albums", [])

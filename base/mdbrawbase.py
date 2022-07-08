@@ -200,8 +200,11 @@ class RawFileInfoData:
     def __init__(self, info=None, err=None):
         self.called = datetime.now()        
         if info is not None:
-            self.created  = FileInfo(info).time()
-            self.filename = info
+            try:
+                self.created  = FileInfo(info).time()
+            except:
+                self.created  = None
+            self.filename = info if isinstance(info,str) else None
         else:
             self.created  = None
             self.filename = None

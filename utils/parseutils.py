@@ -43,7 +43,7 @@ class ParseRawDataUtils:
             return RecentFiles(files=files).getFilesByModTime(expr, modValTimestampPath.path)
         
     def getNewFiles(self, modVal, fileType, expr='< 0 Days', force=False):
-        fileTypeFunc = "" if fileType in [None, "Artist"] else fileType
+        fileTypeFunc = "" if fileType in [None] else fileType
         cmd = 'self.mdbdir.getRaw{0}ModValDataDir({1}).glob("*.*", debug=False)'.format(fileTypeFunc, modVal)
         if self.debug: ts = Timestat("Getting New {0} ModVal={1} Files".format(self.db, modVal))
         try:
@@ -112,6 +112,10 @@ class ParseRawDataUtils:
             base = 200
         elif N > 250:
             base = 100
+        elif N > 100:
+            base = 40
+        elif N > 50:
+            base = 20
         return base
 
     
