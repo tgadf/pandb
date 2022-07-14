@@ -75,17 +75,14 @@ class ParseRawData:
 
                 globData = io.get(ifile)
                 for fid,fdata in globData.items():
-                    cmd = "self.rawio.get{0}Data(fdata)".format(fileType)
+                    cmd   = "self.rawio.get{0}Data(fdata)".format(fileType)
                     rData = eval(cmd)
-                    try:
-                        rData = eval(cmd)
-                    except:
-                        print("Could not call {0}".format(cmd))
                     if isinstance(rData.ID.ID, str):
                         modValData[rData.ID.ID] = rData
                         newData += 1
                     else:
                         badData += 1
+                        
             if self.verbose: tsParse.stop()
 
             if newData > 0:

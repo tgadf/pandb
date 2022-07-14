@@ -52,7 +52,7 @@ class RawDBData(RawDataBase):
     ## Parse Albums Data
     ##############################################################################################################################
     def getAlbumData(self, inputdata):
-        self.getPickledData(inputdata)
+        self.getDictData(inputdata)
         self.assertData()
                     
         mediaData = {}

@@ -11,16 +11,6 @@ class RawDBData(RawDataBase):
     def __init__(self, debug=False):
         super().__init__()
         self.aid = MusicDBID()
-        
-        
-    ##############################################################################################################################
-    ## Parse Master Release Data
-    ##############################################################################################################################
-    def getMasterData(self, inputdata):
-        self.getPickledData(inputdata)
-        drd  = DiscogsReleaseData(self.bsdata)
-        amdc = self.makeRawMediaReleaseData(album=drd.title, url=drd.url, artist={"Primary": drd.artists, "Extra": drd.extraArtists}, code=str(drd.id), aformat={"Genres": drd.genres, "Styles": drd.styles, "Release": drd.main, "NumTracks": drd.numTracks}, aclass=None, year=drd.year)
-        return amdc
 
         
     ##############################################################################################################################
@@ -59,7 +49,7 @@ class RawDBData(RawDataBase):
     ## Parse Albums Data
     ##############################################################################################################################
     def getAlbumData(self, inputdata):
-        self.getPickledData(inputdata)
+        self.getDictData(inputdata)
         self.assertData()
         
         ########################################################################
@@ -97,6 +87,16 @@ class RawDBData(RawDataBase):
         data["mediaCounts"] = self.makeRawMediaCountsData(counts={mediaType: len(mediaTypeData) for mediaType,mediaTypeData in data["media"].media.items()})
         data["info"]        = self.getInfo()
         return self.makeRawData(**data)
+        
+        
+    ##############################################################################################################################
+    ## Parse Master Release Data
+    ##############################################################################################################################
+    def getMasterData(self, inputdata):
+        self.getDictData(inputdata)
+        drd  = DiscogsReleaseData(self.bsdata)
+        amdc = self.makeRawMediaReleaseData(album=drd.title, url=drd.url, artist={"Primary": drd.artists, "Extra": drd.extraArtists}, code=str(drd.id), aformat={"Genres": drd.genres, "Styles": drd.styles, "Release": drd.main, "NumTracks": drd.numTracks}, aclass=None, year=drd.year)
+        return amdc
     
     
 

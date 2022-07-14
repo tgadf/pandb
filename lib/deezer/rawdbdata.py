@@ -3,6 +3,7 @@
 __all__ = ["RawDBData"]
 
 from base import RawDataBase
+from pandas import to_datetime
 from .musicdbid import MusicDBID
 from .rawapidata import deezerAlbum, deezerArtist, deezerTrack
 
@@ -11,14 +12,40 @@ class RawDBData(RawDataBase):
     def __init__(self, debug=False):
         super().__init__()
         self.aid = MusicDBID()
-        self.getArtistData = self.getData
     
         
     ##############################################################################################################################
+    ## Parse Master Release Data
+    ##############################################################################################################################
+    def getAlbumData(self, inputdata):
+        self.getDictData(inputdata)
+        self.assertData()
+        code         = str(self.bsdata['id'])
+        album        = self.bsdata['title']
+        url          = self.bsdata['url']
+        numTracks    = self.bsdata['numTracks']
+        duration     = self.bsdata['duration']
+        fans         = self.bsdata['fans']
+        date         = self.bsdata['date']
+        label        = self.bsdata['label']
+        upc          = self.bsdata['upc']
+        genres       = [genre['name'] for genre in self.bsdata['genres']]
+        contributors = self.bsdata['contributors']
+        artist       = self.bsdata['artist']
+        try:
+            year = to_datetime(date).year
+        except:
+            year = None
+            
+        amdc = self.makeRawMediaReleaseData(album=album, url=url, artist={"Primary": artist, "Contributors": contributors}, code=code, aformat={"Genres": genres, "Label": label, "Fans": fans, "NumTracks": numTracks, "Duration": duration, "UPC": upc}, aclass=None, year=year)
+        return amdc
+    
+    
+    ##############################################################################################################################
     ## Parse Data
     ##############################################################################################################################
-    def getData(self, inputdata):
-        self.getPickledData(inputdata)
+    def getArtistData(self, inputdata):
+        self.getListData(inputdata)
         self.assertData()
         
         artistsData = {}

@@ -7,6 +7,7 @@ from base import ParseRawDataBase
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
+from ioutils import FileIO
 from .rawdbdata import RawDBData
 from .musicdbid import MusicDBID
 
@@ -47,17 +48,23 @@ class ParseRawData(ParseRawDataBase):
             modValData = {}
             newData = 0
             badData = 0
+            io = FileIO()
             if self.verbose: tsParse = Timestat("Parsing {0} Searched For Artists With ModVal={1}".format(N,sModVal))
             pModVal = self.prdutils.getPrintModValue(10*N)
             for i,(idx,row) in enumerate(df.iterrows()):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
-                rData = self.rawio.getArtistData(row)
-                if isinstance(rData.ID.ID, str):
-                    modValData[rData.ID.ID] = rData
-                    newData += 1
-                else:
-                    badData += 1
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd   = "self.rawio.get{0}Data(fdata)".format(fileType)
+                    rData = eval(cmd)
+                    if isinstance(rData.ID.ID, str):
+                        modValData[rData.ID.ID] = rData
+                        newData += 1
+                    else:
+                        badData += 1
+
             if self.verbose: tsParse.stop()
 
             if newData > 0:
@@ -97,21 +104,23 @@ class ParseRawData(ParseRawDataBase):
             ############################################
             newData = 0
             badData = 0
+            io = FileIO()
             if self.verbose: tsParse = Timestat("Parsing {0} New {1} Files".format(N, fileType))
             pModVal = self.prdutils.getPrintModValue(N)
             for i,ifile in enumerate(newFiles):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
-                cmd = "self.rawio.get{0}Data(ifile)".format(fileType)
-                try:
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd   = "self.rawio.get{0}Data(fdata)".format(fileType)
                     rData = eval(cmd)
-                except:
-                    print("Could not call {0}".format(cmd))
-                if isinstance(rData.ID.ID, str):
-                    modValData[rData.ID.ID] = rData
-                    newData += 1
-                else:
-                    badData += 1
+                    if isinstance(rData.ID.ID, str):
+                        modValData[rData.ID.ID] = rData
+                        newData += 1
+                    else:
+                        badData += 1
+                        
             if self.verbose: tsParse.stop()
 
             if newData > 0:

@@ -102,27 +102,28 @@ class ParseRawData:
             # Loop Over Files And Save Results
             ############################################
             newData = 0
+            badData = 0
+            
             if self.verbose: tsParse = Timestat("Parsing {0} New {1} Files".format(N, fileType))
             pModVal = self.prdutils.getPrintModValue(N)
             for i,ifile in enumerate(newFiles):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
-                cmd = "self.rawio.get{0}Data(ifile)".format(fileType)
-                try:
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd   = "self.rawio.get{0}Data(fdata)".format(fileType)
                     rData = eval(cmd)
-                except:
-                    print("Could not call {0}".format(cmd))
-                    self.badData[ifile] = True
-                    continue
-                if isinstance(rData.ID.ID, str):
-                    modValData[rData.ID.ID] = rData
-                    newData += 1
-                else:
-                    self.badData[ifile] = True
+                    if isinstance(rData.ID.ID, str):
+                        modValData[rData.ID.ID] = rData
+                        newData += 1
+                    else:
+                        badData += 1
+                        
             if self.verbose: tsParse.stop()
 
             if newData > 0:
-                if self.verbose: print("  ===> Saving [{0}/{1}/{2}] {3} Entries".format(newData, len(modValData), len(self.badData), "DB Data"))
+                if self.verbose: print("  ===> Saving [{0}/{1}/{2}] {3} Entries".format(newData, len(modValData), badData, "DB Data"))
                 self.prdutils.saveFileTypeModValData(modVal, fileType, modValData)
             else:
                 if self.verbose: print("  ===> Did not find any new data from {0} files".format(N))
@@ -159,55 +160,38 @@ class ParseRawData:
             # Loop Over Files And Save Results
             ############################################
             newData = 0
+            badData = 0
             if self.verbose: tsParse = Timestat("Parsing {0} New {1} Files".format(N, fileType))
             pModVal = self.prdutils.getPrintModValue(N)
             for i,ifile in enumerate(newFiles):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
 
-                finfo = FileInfo(ifile)
-                if finfo.ext == ".tar":
-                    tarExtractDir = DirInfo(finfo.parent).join("tarfileData")
-                    if tarExtractDir.exists():
-                        rmtree(tarExtractDir.path)                        
-                    tarExtractDir.mkDir(debug=False)
-    
-                    tar = tarfile.open(ifile)
-                    masterFiles = [tarExtractDir.join(member.name) for member in tar.getmembers()]
-                    tar.extractall(path=tarExtractDir.path)
-                    tar.close()
-                else:
-                    print(f"File [{ifile}] is not a tar file")
-                    continue
-                
-                for mfile in masterFiles:
-                    finfo = FileInfo(mfile)
-                    artistID,masterID = finfo.basename.split("-")
-                    artistID = str(artistID)
-                    masterID = str(masterID)
+                    globData = io.get(ifile)
+                    for fid,fdata in globData.items():
+                        artistID,masterID = fid.split("-")
+                        artistID = str(artistID)
+                        masterID = str(masterID)
 
-                    cmd = "self.rawio.get{0}Data(mfile)".format(fileType)
-                    try:
-                        mData = eval(cmd)
-                    except:
-                        self.badData[ifile] = True
-                        continue
+                        cmd = "self.rawio.get{0}Data(fdata)".format(fileType)
+                        try:
+                            mData = eval(cmd)
+                        except:
+                            self.badData[ifile] = True
+                            continue
                         
-                    if isinstance(mData.code, str):
-                        if modValData.get(artistID) is None:
-                            modValData[artistID] = {}
-                        modValData[artistID][masterID] = mData
-                        newData += 1
-                    else:
-                        self.badData[ifile] = True
-                        continue
-                        
-
-                rmtree(tarExtractDir.path)
+                        if isinstance(mData.code, str):
+                            if modValData.get(artistID) is None:
+                                modValData[artistID] = {}
+                            modValData[artistID][masterID] = mData
+                            newData += 1
+                        else:
+                            badData += 1
+                                                
             if self.verbose: tsParse.stop()
 
             if newData > 0:
-                if self.verbose: print("  ===> Saving [{0}/{1}/{2}] {3} Entries".format(newData, len(modValData), len(self.badData), "DB Data"))
+                if self.verbose: print("  ===> Saving [{0}/{1}/{2}] {3} Entries".format(newData, len(modValData), badData, "DB Data"))
                 self.prdutils.saveFileTypeModValData(modVal, fileType, modValData)
             else:
                 if self.verbose: print("  ===> Did not find any new data from {0} files".format(N))

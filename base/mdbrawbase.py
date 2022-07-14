@@ -348,6 +348,10 @@ class RawDataBase:
         self.ifile  = ifile
         self.bsdata = ifile if isinstance(ifile,tuple) else None
         
+    def getListData(self, ifile):
+        self.ifile  = ifile
+        self.bsdata = ifile if isinstance(ifile,list) else None
+        
     def getPickledData(self, ifile):
         self.ifile  = ifile
         try:

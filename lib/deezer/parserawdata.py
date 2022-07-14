@@ -7,6 +7,7 @@ from base import MusicDBBaseData, MusicDBBaseDirs
 from utils import ParseRawDataUtils
 from dbid import MusicDBIDModVal
 from timeutils import Timestat
+from ioutils import FileIO
 from pandas import DataFrame
 from .rawdbdata import RawDBData
 from .musicdbid import MusicDBID
@@ -20,7 +21,7 @@ class ParseRawData:
             raise ValueError("ParseRawData(mdbdir) is not of type MusicDBBaseDirs")
         self.rawio     = RawDBData()
         self.prdutils  = ParseRawDataUtils(mdbdata, mdbdir, self.rawio, **kwargs)
-        self.fileTypes = ["Artist"]
+        self.fileTypes = ["Artist", "Album"]
         self.verbose   = kwargs.get('debug', kwargs.get('verbose', False))
         self.db        = mdbdir.db
         self.rawio     = RawDBData()
@@ -31,19 +32,16 @@ class ParseRawData:
     #####################################################################################################################
     # Utility Functions
     #####################################################################################################################
-    def parseArtistData(self, modVal, expr='< 0 Days', force=False):
-        self.parseData("Artist", modVal, expr, force)
     def parse(self, modVal, expr='< 0 Days', force=False):
         for fileType in self.fileTypes:
-            self.parseData(fileType, modVal, expr, force)
+            exec(f"self.parse{fileType}Data(modVal, expr, force)")
 
-        
+            
     #####################################################################################################################
     # Primary Parser
     #####################################################################################################################
-    def parseData(self, fileType, modVal, expr='< 0 Days', force=False):
-        if fileType not in self.fileTypes:
-            raise ValueError("fileType must be in {0}".format(self.fileTypes))
+    def parseAlbumData(self, modVal, expr='< 0 Days', force=False):
+        fileType = "Album"
         if self.verbose: ts = Timestat("Parsing ModVal={0} Raw {1} {2} Files(expr=\'{3}\', force={4})".format(modVal, fileType, self.db, expr, force))
                 
                 
@@ -58,42 +56,105 @@ class ParseRawData:
             # Current ModValData
             ############################################
             modValData = self.prdutils.getFileTypeModValData(modVal, fileType, force)
-            if self.verbose: print("  ===> Found {0} Previously Saved {1} ModVal Data Entries".format(len(modValData), fileType))
+            if self.verbose: print(f"  ===> Found {len(modValData)} Previously Saved {fileType} ModVal Data Entries")
 
             ############################################
             # Loop Over Files And Save Results
             ############################################
             newData = 0
             badData = 0
-            if self.verbose: tsParse = Timestat("Parsing {0} New {1} Files".format(N, fileType))
+            io = FileIO()
+            if self.verbose: tsParse = Timestat(f"Parsing {N} New {fileType} Files")
             pModVal = self.prdutils.getPrintModValue(N)
             for i,ifile in enumerate(newFiles):
                 if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
                     if self.verbose: tsParse.update(n=i+1, N=N)
                 cmd = "self.rawio.get{0}Data(ifile)".format(fileType)
-                rData = eval(cmd)
-                for artistID,artistIDData in rData.items():
-                    if not isinstance(artistID, str):
-                        badData += 1
-                        continue
-                    trueModVal = self.mv.get(artistID)
-                    if modValData.get(trueModVal) is None:
-                        modValData[trueModVal] = {}
-                    if modValData[trueModVal].get(artistID) is None:
-                        modValData[trueModVal][artistID] = artistIDData
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd   = f"self.rawio.get{fileType}Data(fdata)"
+                    albumData = eval(cmd)
+                    albumID = albumData.code
+                    if isinstance(albumID, str):
+                        modValData[albumID] = albumData
                         newData += 1
                     else:
-                        self.prdutils.mergeMediaData(modValData[trueModVal][artistID].media.media, artistIDData.media.media)
-                        newData += 1
+                        badData += 1
+                            
             if self.verbose: tsParse.stop()
 
             if newData > 0:
-                if self.verbose: print("  ===> Saving [{0}/{1}] Pseudo ModVal={2} {3} Entries".format(newData, len(modValData), modVal, "DB Data"))
+                if self.verbose: print(f"  ===> Saving [{len(modValData)}/{newData}/{badData}] Album ModVal={modVal} DB Data Entries")
+                self.prdutils.saveFileTypeModValData(modVal, fileType, modValData)
+            else:
+                if self.verbose: print(f"  ===> Did not find any new data from {N} files")
+                
+        
+        if self.verbose: ts.stop()
+        
+        
+    #####################################################################################################################
+    # Primary Parser
+    #####################################################################################################################
+    def parseArtistData(self, modVal, expr='< 0 Days', force=False):
+        fileType = "Artist"
+        if self.verbose: ts = Timestat("Parsing ModVal={0} Raw {1} {2} Files(expr=\'{3}\', force={4})".format(modVal, fileType, self.db, expr, force))
+                
+                
+        ############################################
+        # New Files Since Last ModValData Update
+        ############################################
+        newFiles = self.prdutils.getNewFiles(modVal, fileType, expr, force)
+            
+        N = len(newFiles)
+        if N > 0:
+            ############################################
+            # Current ModValData
+            ############################################
+            modValData = self.prdutils.getFileTypeModValData(modVal, fileType, force)
+            if self.verbose: print(f"  ===> Found {len(modValData)} Previously Saved {fileType} ModVal Data Entries")
+
+            ############################################
+            # Loop Over Files And Save Results
+            ############################################
+            newData = 0
+            badData = 0
+            io = FileIO()
+            if self.verbose: tsParse = Timestat(f"Parsing {N} New {fileType} Files")
+            pModVal = self.prdutils.getPrintModValue(N)
+            for i,ifile in enumerate(newFiles):
+                if (i+1) % pModVal == 0 or (i+1) == pModVal/2:
+                    if self.verbose: tsParse.update(n=i+1, N=N)
+                cmd = "self.rawio.get{0}Data(ifile)".format(fileType)
+
+                globData = io.get(ifile)
+                for fid,fdata in globData.items():
+                    cmd   = f"self.rawio.get{fileType}Data(fdata)"
+                    rData = eval(cmd)
+                    for artistID,artistIDData in rData.items():
+                        if not isinstance(artistID, str):
+                            badData += 1
+                            continue
+                        trueModVal = self.mv.get(artistID)
+                        if modValData.get(trueModVal) is None:
+                            modValData[trueModVal] = {}
+                        if modValData[trueModVal].get(artistID) is None:
+                            modValData[trueModVal][artistID] = artistIDData
+                            newData += 1
+                        else:
+                            self.prdutils.mergeMediaData(modValData[trueModVal][artistID].media.media, artistIDData.media.media)
+                            newData += 1
+                            
+            if self.verbose: tsParse.stop()
+
+            if newData > 0:
+                if self.verbose: print(f"  ===> Saving [{len(modValData)}/{newData}/{badData}] Pseudo ModVal={modVal} DB Data Entries")
                 for trueModVal,trueModValData in modValData.items():
-                    key = "{0}-{1}".format(modVal, trueModVal)
+                    key = "psmv-{0}-mv-{1}".format(modVal, trueModVal)
                     self.prdutils.saveFileTypeModValData(key, fileType, trueModValData)
             else:
-                if self.verbose: print("  ===> Did not find any new data from {0} files".format(N))
+                if self.verbose: print(f"  ===> Did not find any new data from {N} files")
                 
         
         if self.verbose: ts.stop()
