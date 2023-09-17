@@ -1,0 +1,1 @@
+from pandb import PanDBdef test_pandb():    pdb = PanDB()    assert hasattr(pdb, "getData"), "pdb does not have attr 'getData'"    assert hasattr(pdb, "saveData"), "pdb does not have attr 'saveData'"    assert hasattr(pdb, "getFilename"), "pdb does not have attr 'getFilename'"    assert len(pdb.data) == 1, f"pdb.data [{pdb.data}] does not have one object"
