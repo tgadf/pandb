@@ -3,7 +3,7 @@
 __all__ = ["PanDBMetrics"]
 
 from dbmaster import MasterDBs, MasterMetas
-from musicdb import IOStore
+from musicdb import getdbios
 from utils import Timestat
 from hashlib import md5
 from pandas import Series, DataFrame, merge, concat
@@ -24,8 +24,6 @@ class PanDBMetrics:
         self.dbRankValues = None
         self.dbCounts = None
         self.subRank = None
-
-
         
     ###########################################################################
     # Get Data
@@ -58,11 +56,10 @@ class PanDBMetrics:
     def getAlbumCounts(self, **kwargs):
         self.setData()
         self.verbose = kwargs.get('verbose', self.verbose)
-        ios = IOStore()
         mm  = MasterMetas()
         rankCounts = mm.getMediaRanks()
         ts = Timestat("Loading DB Album Counts", ind=2)
-        dbSummaryCounts = {db: mdbio.data.getSummaryCountsData() for db,mdbio in ios.get().items()}
+        dbSummaryCounts = {db: mdbio.data.getSummaryCountsData() for db,mdbio in getdbios().items()}
         ts.stop()
         
         ts            = Timestat("Creating PanDB ID AlbumCounts", ind=2)
@@ -107,7 +104,6 @@ class PanDBMetrics:
     def getAlbumRanks(self, **kwargs):
         self.setData()
         self.verbose = kwargs.get('verbose', self.verbose)
-        ios  = IOStore()
         mm   = MasterMetas()
         mdbs = MasterDBs()
         rankCounts = mm.getMediaRanks()
